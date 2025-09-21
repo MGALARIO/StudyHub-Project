@@ -3,63 +3,56 @@
 <head>
   <!-- ==========================
     Metadata
-    Description: Page title, charset, viewport
   ========================== -->
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>StudyHub — Your Modern Workspace</title>
+  <title>StudyHub — Your Modern Workspace (Feather)</title>
 
-  <!-- ==========================
-    External Libraries
-    Description: Lucide icons
-  ========================== -->
-    <!-- Bootstrap CSS -->
+  <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
   <!-- jQuery + jQuery UI (for draggable/resizable floating video) -->
   <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
   <script src="https://code.jquery.com/ui/1.13.2/jquery-ui.min.js"></script>
   <link href="https://code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css" rel="stylesheet">
-  
-  
-  <!-- Custom CSS -->
-  <link rel = "stylesheet" href = "style.css">
 
-  
-  <script src="https://cdn.jsdelivr.net/npm/lucide@0.259.0/dist/lucide.min.js"></script>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Feather Icons (FEATHER) -->
+  <script src="https://unpkg.com/feather-icons"></script>
 </head>
 <body>
 
   <!-- ==========================
     App Shell
-    Description: Desktop sidebar + main content
   ========================== -->
   <div class="app-shell">
     
-    <!-- ==========================
-      Desktop Sidebar
-      Description: Navigation, quick actions, profile
-    ========================== -->
+    <!-- Desktop Sidebar -->
     <aside class="sidebar d-none d-lg-flex flex-column" role="navigation" aria-label="Main sidebar">
       <header class="brand mb-3">
         <div class="logo">SH</div>
         <div>
-          <h1 style="font-size:.98rem">StudyHub</h1>
+          <h1 style="font-size:0.98rem">StudyHub</h1>
           <p class="small-muted" style="font-weight:500"> All-in-One Dashboard</p>
         </div>
       </header>
-      <nav  class="mb-3" aria-label="Main navigation">
-        <a href="#" class="nav-link active" data-section="dashboard"><i data-feather="grid"></i> Dashboard</a>
+      <nav class="mb-3" aria-label="Main navigation">
+        <a href="#" class="nav-link active" data-section="dashboard" ><i data-feather="grid" ></i> Dashboard</a>
         <a href="#" class="nav-link" data-section="notes"><i data-feather="file-text"></i> Notes & Tasks</a>
         <a href="#" class="nav-link" data-section="meetings"><i data-feather="video"></i> Meetings</a>
         <a href="#" class="nav-link" data-section="music"><i data-feather="play-circle"></i> Live Radio</a>
         <a href="#" class="nav-link" data-section="youtube"><i data-feather="youtube"></i> YouTube</a>
       </nav>
       <div class="small-muted"> Quick actions</div>
-	  <div class="quick mb-3">
+      <div class="quick mb-3">
         <a href="#" class="nav-link" id="startMeetBtn"><i data-feather="zap"></i> Quick Meet</a>
       </div>
       <footer class="sidebar-bottom">
-        <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;" >User</div>
+        <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;">User</div>
         <div>
           <div style="font-weight:600">Student</div>
           <div class="small-muted">Guest account</div>
@@ -67,47 +60,107 @@
       </footer>
     </aside>
 
-    <!-- ==========================
-      Main Content
-      Description: Header + content area
+    <!-- ========================== 
+    Main Content Description: Header + content area 
     ========================== -->
+    
     <main class="main">
-      
-      <!-- ==========================
-        Header / Navbar
-        Description: Contains title, subtitle, top controls
-      ========================== -->
       <header class="header">
-        <span id="mobileMenuBtn">☰</span>
+        <span class="btn btn-light d-lg-none" type="button" data-bs-toggle="offcanvas" data-bs-target="#mobileSidebar" aria-controls="mobileSidebar" id="mobileMenuBtn">☰</span>
         <div>
-          <h2 id="sectionTitle">Dashboard</h2>
-          <p id="sectionSubtitle">Overview — quick glance</p>
+          <h2 class="page-title" id="sectionTitle">Dashboard</h2>
+          <p class="page-sub" id="sectionSubtitle">Overview — quick glance</p>
         </div>
       </header>
 
-      <!-- ==========================
-        Content Area
-        Description: All dashboard sections
-      ========================== -->
-      <section id="contentArea">
+      <!-- ========================== 
+       Content Area Description: All dashboard sections 
+       ========================== -->
 
-        <!-- Dashboard Section -->
-        <section data-section-content="dashboard">
+      <section id="contentArea">
+        <section class="fade-in" data-section-content="dashboard">
+          <div class="grid-3 mb-3">
+
+          <!-- Dashboard Section: Clock Card -->
+            <article class="card-ui text-center">
+              <div class="small-muted">Current Time</div>
+              <time id="clock" style="font-size:1.5rem;font-weight:700; display:block; margin-top:.35rem"></time>
+              <time class="small-muted" id="date" style="display:block; margin-top:.25rem"></time>
+            </article>
+
+          <!-- Dashboard Section: Weather Card -->
+            <article class="card-ui text-center">
+              <div class="small-muted">Weather</div>
+              <div id="weather" style="margin-top:.35rem">Loading…</div>
+            </article>
+      
+          <!-- Dashboard Section: Mini Calendar Card -->
+            <article class="card-ui text-center">
+                <div>
+                  <div class="small-muted">Mini Calendar</div>
+                  <div id="miniCalendar" style="margin-top:.5rem"></div>
+                </div>             
+            </article>          
+          </div>
+
+          <!-- Announcements / Reminders -->
           <article class="card-ui">
-            <div class="small-muted">Current Time</div>
-            <time id="clock"></time>
-            <time id="date"></time>
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="section-title"><i data-feather="bell"></i> Announcements</div>
+                <div id="announcements" class="small-muted">No reminders yet — add tasks in Notes & Tasks.</div>
+              </div>
+              <div class="controls">
+                <button class="btn btn-sm btn-outline-primary" id="viewNotesBtn">View Notes</button>
+              </div>
+            </div>
           </article>
         </section>
 
         <!-- Notes & Tasks Section -->
         <section data-section-content="notes" style="display:none;">
-          <article class="card-ui">
-            <header>
-              <h3><i data-feather="file-text"></i> Notes & Tasks</h3>
-            </header>
-          </article>
+          <div class="card-ui mb-3">
+            <article class="d-flex align-items-center justify-content-between">
+              <header>
+                <h3 class="section-title"><i data-feather="file-text"></i> Notes & Tasks</h3>
+                <h3 class="small-muted">Manage tasks and set alarms</h3>
+              </header>
+              <div>
+                <button class="btn btn-primary" id="toggleNoteFormBtn"><i data-feather="plus"></i> Add Note</button>
+              </div>
+            </article>
+
+            <!-- Hidden Note Form -->
+           <div id="noteFormWrap" style="display:none; margin-top:1rem;">
+              <form id="noteForm">
+                <input type="hidden" id="editingId">
+                <div class="mb-2">
+                  <label for="titleInput" class="form-label">Title</label>
+                  <input type="text" id="titleInput" class="form-control" required>
+                </div>
+                <div class="mb-2">
+                  <label for="contentInput" class="form-label">Content</label>
+                  <textarea id="contentInput" class="form-control"></textarea>
+                </div>
+                <div class="mb-2">
+                  <label for="deadlineInput" class="form-label">Deadline</label>
+                  <input type="datetime-local" id="deadlineInput" class="form-control">
+                </div>
+                <div class="form-check mb-2">
+                  <input type="checkbox" class="form-check-input" id="alarmToggle">
+                  <label class="form-check-label" for="alarmToggle">Enable Alarm</label>
+                </div>
+                <button type="submit" class="btn btn-success">Save Note</button>
+              </form>
+              <audio id="alarmAudio" src="alarm.mp3" preload="auto"></audio>
+            </div>
+            <div id="notesList" style="margin-top:1rem;"></div>
+            <div id="missedHistory" style="margin-top:1rem;"></div>
+            <button class="btn btn-sm btn-outline-danger" id="clearMissed">Clear Missed Tasks</button>
+
+          </div>
         </section>
+
 
         <!-- Meetings Section -->
         <section data-section-content="meetings" style="display:none;">
@@ -115,19 +168,20 @@
             <header>
               <h3><i data-feather="video"></i> Meetings</h3>
             </header>
+            <div id="videoContainer"></div> <!-- Add this -->
           </article>
         </section>
 
-        <!-- Music Section -->
+        <!-- Radio Section -->
         <section data-section-content="music" style="display:none;">
           <article class="card-ui">
             <header>
-              <h3><i data-feather="music"></i> Music</h3>
+              <h3><i data-feather="music"></i> Live Radio</h3>
             </header>
           </article>
         </section>
 
-        <!-- YouTube Section -->
+        <!-- YouTube -->
         <section data-section-content="youtube" style="display:none;">
           <article class="card-ui">
             <header>
@@ -140,27 +194,33 @@
     </main>
   </div>
 
-  <!-- ==========================
-    Mobile Sidebar / Offcanvas
-    Description: Hidden sidebar for small screens
-  ========================== -->
-  <aside class="mobile-sidebar mobile-sidebar-start d-lg-none" tabindex="-1" id="mobileSidebar" role="navigation" aria-label="Mobile sidebar">
-    <nav aria-label="Mobile navigation">
+  <!-- Mobile Sidebar / Offcanvas -->
+  <aside class="mobile-sidebar mobile-sidebar-start offcanvas d-lg-none" tabindex="-1" id="mobileSidebar" aria-label="Mobile sidebar">
+    <nav aria-label="Mobile navigation" class="offcanvas-body">
       <a href="#" data-section="dashboard">Dashboard</a>
       <a href="#" data-section="notes">Notes & Tasks</a>
       <a href="#" data-section="meetings">Meetings</a>
-      <a href="#" data-section="music">Music</a>
+      <a href="#" data-section="music">Live Radio</a>
       <a href="#" data-section="youtube">YouTube</a>
     </nav>
   </aside>
 
   <div class="mobile-overlay" id="mobileOverlay"></div>
 
-  <!-- ==========================
-    Feather Icons Initialization
-  ========================== -->
+  <div id="floatingVideo" style="display:none; position:fixed; bottom:20px; right:20px; width:320px; height:180px; z-index:1000;">
+    <div id="floatingVideoInner" style="width:100%; height:100%;"></div>
+  </div>
+
+
+  <!-- Feather Icons Init -->
   <script>
-    feather.replace();
+    // Replace <i data-feather="..."> with inline SVGs
+    if (window.feather) {
+      feather.replace();
+    }
   </script>
+
+  <!-- Custom JS -->
+  <script src="script.js"></script>
 </body>
 </html>

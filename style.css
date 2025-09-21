@@ -69,24 +69,102 @@ html, body {
   background:#ff4a42;
 }
 
-.main {
-  padding:1.5rem;
+
+/* Main content */
+.main { 
+  flex:1; 
+  padding:1.25rem; 
+  min-height:100vh; 
 }
 
-.topbar {
-  border-bottom:1px solid #e5e7eb;
-  padding-bottom:.75rem;
+.header { 
+  display:flex; 
+  align-items:center; 
+  justify-content:space-between; 
+  gap:1rem; 
+  margin-bottom:1rem; 
 }
 
-.card {
-  border:none;
-  border-radius:var(--card-radius);
+.page-title { 
+  font-weight:700; 
+  font-size:1.05rem; 
+  color:var(--nav); 
 }
 
+.page-sub { 
+  color:var(--muted); 
+  font-size:.92rem; }
+
+/* Top bar controls */
+.top-controls .btn { 
+  border-radius:10px; 
+}
+
+/* Card base */
+.card-ui { 
+  background:var(--panel); 
+  border-radius:var(--card-radius); 
+  padding:14px; box-shadow:var(--shadow); 
+  margin-bottom:12px; 
+  transition:transform .12s, box-shadow .12s; 
+}
+
+.card-ui:hover{ 
+  transform: translateY(-6px); 
+  box-shadow: 0 18px 40px rgba(16,24,40,0.08); 
+}
+
+/* Dashboard grid */
+.grid-3 { 
+  display:grid; 
+  grid-template-columns: repeat(3, 1fr); 
+  gap:16px; }
+
+@media (max-width: 992px){ .grid-3 { grid-template-columns: repeat(2,1fr); } .sidebar{display:none;} .app-shell{flex-direction:column;} }
+@media (max-width: 576px){ .grid-3 { grid-template-columns:1fr; } }
+
+/* Announcements */
+.announcement { background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:#fff; padding:.7rem; border-radius:10px; cursor:pointer; box-shadow:0 8px 26px rgba(255,107,95,0.08); }
+
+/* Note card */
+.note-card { border-left:6px solid #ffd8d2; padding:12px; border-radius:8px; box-shadow:none; display:flex; justify-content:space-between; gap:8px;}
+.note-card .meta { color:var(--muted); font-size:.85rem; }
+
+/* Floating video (draggable + resizable) */
 .floating-video {
-  position:fixed;
-  bottom:20px;
-  right:20px;
-  width:320px;
-  z-index:2000;
+  position: fixed; bottom: 18px; right: 18px; width: 360px; height: 210px; min-width: 200px; min-height:140px;
+  background:#000; border-radius:12px; box-shadow:0 18px 40px rgba(16,24,40,0.3);
+  overflow:hidden; z-index:3000; display:none; flex-direction:column;
 }
+
+.fv-header { cursor: grab; display:flex; align-items:center; justify-content:space-between; padding:8px 10px; background:rgba(0,0,0,0.45); color:#fff; font-size:.9rem; user-select:none; }
+.fv-body { flex:1; background:#000; }
+.floating-video iframe { width:100%; height:100%; border:0; display:block; }
+
+/* subtle animations */
+.fade-in { animation: fadeIn .28s ease both; }
+@keyframes fadeIn { from { opacity:0; transform: translateY(6px);} to { opacity:1; transform:none; } }
+
+/* utility */
+.muted { color:var(--muted); font-size:.9rem; }
+.small-muted { color:var(--muted); font-size:.85rem; }
+.section-title { display:flex; align-items:center; gap:.5rem; margin-bottom:.6rem; font-weight:700; color:var(--nav); }
+
+/* responsive tweaks */
+.card-ui .controls { display:flex; gap:.5rem; align-items:center; }
+
+/* form styles */
+.form-inline-gap { display:flex; gap:.6rem; flex-wrap:wrap; align-items:center; }
+
+/* improved buttons */
+.btn-primary { background: linear-gradient(90deg,var(--accent), #ff9b92); border:0; box-shadow:none; }
+.btn-outline-primary { border-radius:10px; }
+
+/* list-group-look */
+.list-group-item-action { cursor:pointer; border-radius:8px; }
+
+/* Calendar small style */
+#miniCalendar table { width:100%; border-collapse:collapse; }
+#miniCalendar th { font-weight:600; font-size:.78rem; color:var(--muted); padding:.25rem .3rem; text-align:center; }
+#miniCalendar td { padding:.4rem; text-align:center; border-radius:6px; }
+#miniCalendar td.today { background: linear-gradient(90deg,var(--accent-2),var(--accent)); color:#fff; font-weight:700; }
