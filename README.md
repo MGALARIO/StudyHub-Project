@@ -1,6 +1,6 @@
 # Web Systems and Technology Project
 
-This is my first project for the **Web Systems and Technology** subject.  
+This is our group's first project for the **Web Systems and Technology** subject.  
 It is a basic website containing:
 
 - `index.html` – The main webpage.  
