@@ -562,3 +562,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
+const mobileSidebar = document.getElementById('mobileSidebar');
+const mobileOverlay = document.getElementById('mobileOverlay');
+const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+// Open / Close sidebar
+mobileMenuBtn.addEventListener('click', () => {
+  mobileSidebar.classList.add('active');
+  mobileOverlay.classList.add('active');
+});
+
+// Close sidebar on overlay click
+mobileOverlay.addEventListener('click', () => {
+  mobileSidebar.classList.remove('active');
+  mobileOverlay.classList.remove('active');
+});
+
+// Optional: close sidebar on ESC key
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') {
+    mobileSidebar.classList.remove('active');
+    mobileOverlay.classList.remove('active');
+  }
+});
