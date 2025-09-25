@@ -33,13 +33,14 @@
     
     <!-- Desktop Sidebar -->
     <aside class="sidebar d-none d-lg-flex flex-column" role="navigation" aria-label="Main sidebar">
-      <header class="brand mb-3">
-        <div class="logo">SH</div>
-        <div>
-          <h1 style="font-size:0.98rem">StudyHub</h1>
-          <p class="small-muted" style="font-weight:500"> All-in-One Dashboard</p>
-        </div>
-      </header>
+    <header class="brand mb-3 d-flex align-items-center gap-2">
+      <div class="logo">SH</div>
+      <div>
+        <h1 style="font-size:0.98rem; margin:0;">StudyHub</h1>
+        <p class="small-muted" style="font-weight:500; margin:0;">All-in-One Dashboard</p>
+      </div>
+    </header>
+
       <nav class="mb-3" aria-label="Main navigation">
         <a href="#" class="nav-link active" data-section="dashboard" ><i data-feather="grid" ></i> Dashboard</a>
         <a href="#" class="nav-link" data-section="notes"><i data-feather="file-text"></i> Notes & Tasks</a>
@@ -174,10 +175,8 @@
 
         <!-- Radio Section -->
         <section data-section-content="music" style="display:none;">
-          <!-- 📻 Modern Radio with Rain -->
+
           <section class="radio-container card-ui">
-            <!-- Rain overlay inside the card -->
-            <section class="rain"></section>
 
             <!-- Equalizer -->
             <div class="floating-equalizer" id="equalizer">
@@ -208,7 +207,7 @@
                 </svg>
               </div>
 
-              <div class="station-name fw-bold" id="stationName">Welcome to Modern Radio</div>
+              <div class="station-name fw-bold" id="stationName">Welcome to Live Radio</div>
               <div class="station-info small-muted" id="stationInfo">Select a country and navigate through stations</div>
             </div>
 
@@ -229,8 +228,6 @@
             <div class="loading-indicator text-center mt-3" id="loadingIndicator" style="display:none;">
               <div class="spinner-border text-light" role="status"></div>
               <div class="mt-2">Loading stations...</div>
-            </div>
-          </section>
         </section>
 
 

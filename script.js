@@ -562,5 +562,3 @@ document.addEventListener('DOMContentLoaded', () => {
 
 });
 
-
-// --- MEETINGS SYSTEM ---
