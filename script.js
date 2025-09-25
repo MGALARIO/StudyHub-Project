@@ -58,8 +58,8 @@ document.addEventListener('DOMContentLoaded', () => {
       sectionSubtitle.textContent = 'Start or join study calls'; 
     }
     if (name === 'music') { 
-      sectionTitle.textContent = 'Music'; 
-      sectionSubtitle.textContent = 'Play focus tracks'; 
+      sectionTitle.textContent = 'Live Radio'; 
+      sectionSubtitle.textContent = 'Play, Listen, Relax and Enjoy!'; 
     }
     if (name === 'youtube') { 
       sectionTitle.textContent = 'YouTube'; 
@@ -561,3 +561,6 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
 });
+
+
+// --- MEETINGS SYSTEM ---

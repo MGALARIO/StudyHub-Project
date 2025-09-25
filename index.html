@@ -174,12 +174,65 @@
 
         <!-- Radio Section -->
         <section data-section-content="music" style="display:none;">
-          <article class="card-ui">
-            <header>
-              <h3><i data-feather="music"></i> Live Radio</h3>
-            </header>
-          </article>
+          <!-- 📻 Modern Radio with Rain -->
+          <section class="radio-container card-ui">
+            <!-- Rain overlay inside the card -->
+            <section class="rain"></section>
+
+            <!-- Equalizer -->
+            <div class="floating-equalizer" id="equalizer">
+              <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+              <div class="eq-bar"></div><div class="eq-bar"></div>
+            </div>
+
+            <!-- Header -->
+            <div class="header mb-3">
+              <h3 class="app-title"><i data-feather="radio"></i> Modern Radio</h3>
+              <div class="country-selector mt-2">
+                <button class="country-btn active btn btn-sm btn-primary" data-country="PH">🇵🇭 PH</button>
+                <button class="country-btn btn btn-sm btn-outline-primary" data-country="US">🇺🇸 US</button>
+                <button class="country-btn btn btn-sm btn-outline-primary" data-country="GB">🇬🇧 UK</button>
+                <button class="country-btn btn btn-sm btn-outline-primary" data-country="CA">🇨🇦 CA</button>
+                <button class="country-btn btn btn-sm btn-outline-primary" data-country="AU">🇦🇺 AU</button>
+              </div>
+            </div>
+
+            <!-- Status -->
+            <div class="status-message" id="statusMessage"></div>
+
+            <!-- Station Info -->
+            <div class="station-display my-3">
+              <div class="station-avatar" id="stationAvatar">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M20 7.24V6a2 2 0 0 0-2-2H6.76l9.72-3.24-.64 1.91L6 5.5V6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a.76.76 0 0 0-.76-.76zM8 14a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm8-4h-4v-2h4z"/>
+                </svg>
+              </div>
+
+              <div class="station-name fw-bold" id="stationName">Welcome to Modern Radio</div>
+              <div class="station-info small-muted" id="stationInfo">Select a country and navigate through stations</div>
+            </div>
+
+            <div class="station-counter small" id="stationCounter">Ready to load stations</div>
+
+            <!-- Audio Controls -->
+            <div class="audio-controls mt-3">
+              <audio class="main-audio w-100" id="mainAudio" controls preload="none"></audio>
+            </div>
+
+            <!-- Navigation -->
+            <div class="navigation mt-3">
+              <button class="nav-btn btn btn-outline-light me-2" id="prevBtn">⏮ Prev</button>
+              <button class="nav-btn btn btn-outline-light" id="nextBtn">Next ⏭</button>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div class="loading-indicator text-center mt-3" id="loadingIndicator" style="display:none;">
+              <div class="spinner-border text-light" role="status"></div>
+              <div class="mt-2">Loading stations...</div>
+            </div>
+          </section>
         </section>
+
 
         <!-- YouTube -->
         <section data-section-content="youtube" style="display:none;">
