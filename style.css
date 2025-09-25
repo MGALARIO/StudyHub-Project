@@ -440,6 +440,34 @@ header.brand {
   z-index: 2000;
 }
 
+
+/* =========================
+   Mobile Hamburger Button Fix
+========================= */
+#mobileMenuBtn {
+  font-size: 1.8rem;       /* bigger than default */
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 0;
+  background-color: rgba(255,255,255,0.1); /* subtle background */
+  color: var(--nav);
+  cursor: pointer;
+  transition: background 0.25s, transform 0.2s;
+}
+
+#mobileMenuBtn:hover {
+  background-color: rgba(255,255,255,0.2);
+  transform: scale(1.05);
+}
+
+
+
+
+
 /* Mobile Sidebar Logo */
 .mobile-sidebar .logo {
   width: 42px;
