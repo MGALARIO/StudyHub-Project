@@ -170,13 +170,38 @@
 
         <!-- Meetings -->
         <section data-section-content="meetings" style="display:none;">
-          <article class="card-ui">
-            <header>
-              <h3><i data-feather="video"></i> Meetings</h3>
-            </header>
-            <div id="videoContainer"></div>
-          </article>
+          <div class="card-ui mb-3">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="section-title"><i data-feather="video"></i> Meetings</div>
+                <div class="small-muted">Start or join study calls</div>
+              </div>
+            </div>
+
+            <div class="row g-2 mt-2 align-items-center">
+              <div class="col-sm-6 col-md-5">
+                <input id="roomInput" class="form-control" placeholder="Room path (optional) — e.g., hello" />
+              </div>
+              <div class="col-auto d-flex gap-2">
+                <button id="startBtn" class="btn btn-success">🚀 Start</button>
+                <button id="stopBtn" class="btn btn-outline-danger" disabled>⛔ Stop</button>
+                <button id="openBtn" class="btn btn-outline-primary">↗ Open</button>
+              </div>
+            </div>
+
+            <div id="videoContainer" class="mt-3" style="display:none;"></div>
+          </div>
+
+          <div class="card-ui">
+            <h6>Meeting Tips</h6>
+            <ul class="small-muted mb-0">
+              <li>Choose a unique room name to avoid collisions.</li>
+              <li>Test camera/mic permissions on mobile and desktop.</li>
+              <li>Use the floating video to keep meeting visible while browsing other sections.</li>
+            </ul>
+          </div>
         </section>
+
 
         <!-- Radio / Music -->
         <section data-section-content="music" style="display:none;">
@@ -240,12 +265,25 @@
 
         <!-- YouTube -->
         <section data-section-content="youtube" style="display:none;">
-          <article class="card-ui">
-            <header>
-              <h3><i data-feather="youtube"></i> YouTube</h3>
-            </header>
-          </article>
+          <div class="card-ui">
+            <div class="d-flex align-items-center justify-content-between">
+              <div>
+                <div class="section-title"><i data-feather="youtube"></i> YouTube</div>
+                <div class="small-muted">Search and play videos</div>
+              </div>
+            </div>
+
+            <div class="input-group mt-2 mb-2">
+              <input id="ytSearch" class="form-control" placeholder="Search YouTube...">
+              <button id="ytSearchBtn" class="btn btn-primary">Search</button>
+            </div>
+
+            <!-- Results grid -->
+            <div id="ytResults" class="row g-2"></div>
+          </div>
         </section>
+
+
 
       </section>
     </main>
