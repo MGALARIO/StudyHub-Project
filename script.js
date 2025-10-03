@@ -585,3 +585,261 @@ document.addEventListener('keydown', (e) => {
     mobileOverlay.classList.remove('active');
   }
 });
+
+
+
+/* ================================
+   Radio Class Code
+   ================================ */
+class ModernRadio {
+  constructor() {
+    this.stations = [];
+    this.currentStationIndex = 0;
+    this.currentCountry = 'PH';
+    this.workingEndpoints = [];
+    this.isLoading = false;
+
+    // Radio Browser API endpoints
+    this.API_ENDPOINTS = [
+      'https://at1.api.radio-browser.info',
+      'https://de1.api.radio-browser.info',
+      'https://nl1.api.radio-browser.info',
+      'https://fr1.api.radio-browser.info'
+    ];
+
+    // Status icons
+    this.STATUS_ICONS = {
+      success: '\u2705',       
+      warning: '\u26A0\uFE0F', 
+      error: '\u274C'          
+    };
+
+    // Fallback stations if API fails
+    this.FALLBACK_STATIONS = {
+      PH: [
+        { name: "DZMM TeleRadyo", url: "http://sg-icecast-1.eradioportal.com:8060/dzmm_teleradyo", country: "Philippines", tags: "news, talk", codec: "MP3", bitrate: "128" },
+        { name: "Love Radio Manila", url: "http://sg-icecast-1.eradioportal.com:8060/love_radio_manila", country: "Philippines", tags: "pop, opm", codec: "MP3", bitrate: "128" },
+        { name: "Magic 89.9", url: "http://sg-icecast-1.eradioportal.com:8060/magic_899", country: "Philippines", tags: "pop, hits", codec: "MP3", bitrate: "128" },
+        { name: "DWRR 101.1", url: "http://sg-icecast-1.eradioportal.com:8060/dwrr_1011", country: "Philippines", tags: "pop, rock", codec: "MP3", bitrate: "128" },
+        { name: "DZBB Super Radyo", url: "http://sg-icecast-1.eradioportal.com:8060/dzbb_super_radyo", country: "Philippines", tags: "news, talk", codec: "MP3", bitrate: "128" }
+      ],
+      US: [
+        { name: "NPR News", url: "https://npr-ice.streamguys1.com/live.mp3", country: "United States", tags: "news, talk", codec: "MP3", bitrate: "128" },
+        { name: "KEXP 90.3", url: "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", country: "United States", tags: "alternative, indie", codec: "MP3", bitrate: "128" },
+        { name: "WNYC FM", url: "https://fm939.wnyc.org/wnycfm", country: "United States", tags: "public radio, news", codec: "MP3", bitrate: "128" }
+      ],
+      GB: [
+        { name: "BBC Radio 1", url: "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio1_mf_p", country: "United Kingdom", tags: "pop, hits", codec: "AAC", bitrate: "128" },
+        { name: "BBC Radio 2", url: "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio2_mf_p", country: "United Kingdom", tags: "pop, classic hits", codec: "AAC", bitrate: "128" }
+      ],
+      CA: [
+        { name: "CBC Radio One", url: "https://cbc_r1_tor.akacast.akamaistream.net/7/750/451661/v1/rc.akacast.akamaistream.net/cbc_r1_tor", country: "Canada", tags: "news, talk", codec: "MP3", bitrate: "128" }
+      ],
+      AU: [
+        { name: "ABC Classic", url: "https://live-radio01.mediahubaustralia.com/2CLW/mp3/", country: "Australia", tags: "classical", codec: "MP3", bitrate: "128" }
+      ]
+    };
+
+    this.init();
+  }
+
+  init() {
+    this.setupEventListeners();
+    this.loadStations();
+  }
+
+  setupEventListeners() {
+    // Country buttons
+    document.querySelectorAll('.country-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.country-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        this.currentCountry = btn.dataset.country;
+        this.currentStationIndex = 0;
+        this.loadStations();
+      });
+    });
+
+    // Prev / Next
+    document.getElementById('prevBtn').addEventListener('click', () => this.previousStation());
+    document.getElementById('nextBtn').addEventListener('click', () => this.nextStation());
+
+    // Audio events
+    const audio = document.getElementById('mainAudio');
+    audio.addEventListener('play', () => this.onAudioPlay());
+    audio.addEventListener('pause', () => this.onAudioPause());
+    audio.addEventListener('ended', () => this.onAudioPause());
+    audio.addEventListener('error', () => this.onAudioError());
+  }
+
+  showLoading(show) {
+    this.isLoading = show;
+    document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+    document.getElementById('prevBtn').disabled = show;
+    document.getElementById('nextBtn').disabled = show;
+  }
+
+  showStatus(message, type = 'success', duration = 3000) {
+    const statusElement = document.getElementById('statusMessage');
+    statusElement.className = `status-message status-${type}`;
+    statusElement.textContent = message;
+    statusElement.style.display = 'block';
+
+    setTimeout(() => {
+      statusElement.style.display = 'none';
+    }, duration);
+  }
+
+  async testEndpoints() {
+    this.workingEndpoints = [];
+
+    for (let endpoint of this.API_ENDPOINTS) {
+      try {
+        const response = await fetch(`${endpoint}/json/stats`, {
+          method: 'GET',
+          signal: AbortSignal.timeout(8000)
+        });
+
+        if (response.ok) {
+          this.workingEndpoints.push(endpoint);
+        }
+      } catch (error) {
+        console.warn(`Endpoint ${endpoint} failed`);
+      }
+    }
+
+    return this.workingEndpoints.length > 0;
+  }
+
+  async fetchStationsFromAPI() {
+    if (this.workingEndpoints.length === 0) {
+      const hasWorking = await this.testEndpoints();
+      if (!hasWorking) {
+        throw new Error('No working API endpoints');
+      }
+    }
+
+    for (let endpoint of this.workingEndpoints) {
+      try {
+        const response = await fetch(`${endpoint}/json/stations/bycountrycodeexact/${this.currentCountry}`, {
+          signal: AbortSignal.timeout(10000)
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          return data.filter(station => station.url_resolved || station.url);
+        }
+      } catch (error) {
+        console.warn(`API fetch failed for ${endpoint}`);
+      }
+    }
+
+    throw new Error('All API requests failed');
+  }
+
+  async loadStations() {
+    this.showLoading(true);
+
+    try {
+      const apiStations = await this.fetchStationsFromAPI();
+      this.stations = apiStations.slice(0, 50);
+      const icon = this.STATUS_ICONS.success;
+      this.showStatus(`${icon} Loaded ${this.stations.length} stations from API`, 'success');
+    } catch (error) {
+      this.stations = this.FALLBACK_STATIONS[this.currentCountry] || [];
+      if (this.stations.length > 0) {
+        const icon = this.STATUS_ICONS.warning;
+        this.showStatus(`${icon} Using backup stations (${this.stations.length} available)`, 'warning');
+      } else {
+        const icon = this.STATUS_ICONS.error;
+        this.showStatus(`${icon} No stations available for this country`, 'error');
+      }
+    }
+
+    this.currentStationIndex = 0;
+    this.updateDisplay();
+    this.showLoading(false);
+  }
+
+  updateDisplay() {
+    if (this.stations.length === 0) {
+      document.getElementById('stationName').textContent = 'No stations available';
+      document.getElementById('stationInfo').textContent = 'Try selecting a different country';
+      document.getElementById('stationCounter').textContent = '';
+      // keep static SVG in HTML
+      return;
+    }
+
+    const station = this.stations[this.currentStationIndex];
+    const avatar = document.getElementById('stationAvatar');
+    const name = document.getElementById('stationName');
+    const info = document.getElementById('stationInfo');
+    const counter = document.getElementById('stationCounter');
+    const audio = document.getElementById('mainAudio');
+
+    name.textContent = station.name || 'Unknown Station';
+
+    const tags = station.tags || 'No genre info';
+    const bitrate = station.bitrate ? `${station.bitrate} kbps` : 'Unknown quality';
+    const codec = station.codec || 'Unknown format';
+    info.textContent = `${tags} • ${bitrate} • ${codec}`;
+    counter.textContent = `Station ${this.currentStationIndex + 1} of ${this.stations.length}`;
+
+    // Always keep same radio SVG icon
+    avatar.innerHTML = this.getStationIcon();
+
+    const streamUrl = station.url_resolved || station.url;
+    if (streamUrl) {
+      audio.src = streamUrl;
+      audio.load();
+    }
+
+    document.getElementById('prevBtn').disabled = this.currentStationIndex === 0;
+    document.getElementById('nextBtn').disabled = this.currentStationIndex === this.stations.length - 1;
+  }
+
+  // Always static SVG icon
+  getStationIcon() {
+    return `
+      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
+           viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 7.24V6a2 2 0 0 0-2-2H6.76l9.72-3.24-.64 1.91L6 5.5V6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a.76.76 0 0 0-.76-.76zM8 14a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm8-4h-4v-2h4z"/>
+      </svg>
+    `;
+  }
+
+  previousStation() {
+    if (this.currentStationIndex > 0 && !this.isLoading) {
+      this.currentStationIndex--;
+      this.updateDisplay();
+    }
+  }
+
+  nextStation() {
+    if (this.currentStationIndex < this.stations.length - 1 && !this.isLoading) {
+      this.currentStationIndex++;
+      this.updateDisplay();
+    }
+  }
+
+  onAudioPlay() {
+    document.getElementById('stationAvatar').classList.add('playing');
+    document.getElementById('equalizer').classList.add('active');
+  }
+
+  onAudioPause() {
+    document.getElementById('stationAvatar').classList.remove('playing');
+    document.getElementById('equalizer').classList.remove('active');
+  }
+
+  onAudioError() {
+    const icon = this.STATUS_ICONS.error;
+    this.showStatus(`${icon} Failed to play this station. Try the next one.`, 'error');
+    this.onAudioPause();
+  }
+}
+
+// Initialize the radio app
+window.addEventListener('load', () => {
+  new ModernRadio();
+});
