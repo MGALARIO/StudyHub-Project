@@ -1,4 +1,3 @@
-
 <!doctype html>
 <html lang="en">
 <head>
@@ -169,39 +168,49 @@
           </div>
         </section>
 
-        <!-- Meetings -->
-        <section data-section-content="meetings" style="display:none;">
-          <div class="card-ui mb-3">
-            <div class="d-flex align-items-center justify-content-between">
-              <div>
-                <div class="section-title"><i data-feather="video"></i> Meetings</div>
-                <div class="small-muted">Start or join study calls</div>
-              </div>
-            </div>
+<!-- Meetings Section -->
+<section data-section-content="meetings" style="display:none;">
+  <div class="card-ui mb-3">
+    <div class="d-flex align-items-center justify-content-between">
+      <div>
+        <div class="section-title"><i data-feather="video"></i> Meetings</div>
+        <div class="small-muted">Start or join study calls</div>
+      </div>
+    </div>
 
-            <div class="row g-2 mt-2 align-items-center">
-              <div class="col-sm-6 col-md-5">
-                <input id="roomInput" class="form-control" placeholder="Room path (optional) — e.g., hello" />
-              </div>
-              <div class="col-auto d-flex gap-2">
-                <button id="startBtn" class="btn btn-success">🚀 Start</button>
-                <button id="stopBtn" class="btn btn-outline-danger" disabled>⛔ Stop</button>
-                <button id="openBtn" class="btn btn-outline-primary">↗ Open</button>
-              </div>
-            </div>
+    <div class="row g-2 mt-2 align-items-center">
+      <div class="col-sm-6 col-md-5">
+        <input id="roomInput" class="form-control" placeholder="Room path (optional) — e.g., hello" />
+      </div>
+      <div class="col-auto d-flex gap-2">
+        <button id="startBtn" class="btn btn-success">🚀 Start</button>
+        <button id="stopBtn" class="btn btn-outline-danger" disabled>⛔ Stop</button>
+        <button id="openBtn" class="btn btn-outline-primary">↗ Open</button>
+        <button id="floatBtn" class="btn btn-outline-warning">📌 Float</button>
+      </div>
+    </div>
 
-            <div id="videoContainer" class="mt-3" style="display:none;"></div>
-          </div>
+    <div id="videoContainer" class="mt-3" style="display:block; width:100%; height:520px;"></div>
+  </div>
 
-          <div class="card-ui">
-            <h6>Meeting Tips</h6>
-            <ul class="small-muted mb-0">
-              <li>Choose a unique room name to avoid collisions.</li>
-              <li>Test camera/mic permissions on mobile and desktop.</li>
-              <li>Use the floating video to keep meeting visible while browsing other sections.</li>
-            </ul>
-          </div>
-        </section>
+  <div class="card-ui">
+    <h6>Meeting Tips</h6>
+    <ul class="small-muted mb-0">
+      <li>Choose a unique room name to avoid collisions.</li>
+      <li>Test camera/mic permissions on mobile and desktop.</li>
+      <li>Use the floating video to keep meeting visible while browsing other sections.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- Floating Video Container -->
+<div id="floatingVideo" style="display:none; position:fixed; bottom:20px; right:20px; width:320px; height:180px; z-index:1000; background:#000; border-radius:10px; flex-direction:column; box-shadow:0 4px 12px rgba(0,0,0,0.5);">
+  <div class="fv-header" style="cursor:move; padding:4px; background:rgba(0,0,0,0.7); color:#fff; display:flex; justify-content:space-between; align-items:center; border-top-left-radius:10px; border-top-right-radius:10px;">
+    <span style="font-size:0.85rem;">📹 Live Meeting</span>
+    <button id="closeFloating" style="background:none; border:none; color:#fff; font-size:0.85rem; cursor:pointer;">✖</button>
+  </div>
+  <div id="floatingVideoInner" style="flex:1; width:100%; height:calc(100% - 40px);"></div>
+</div>
 
 
         <!-- Radio / Music -->
@@ -260,9 +269,8 @@
               <div class="mt-2">Loading stations...</div>
             </div>
 
-          </section> <!-- Close radio-container -->
-        </section> <!-- Close music section -->
-
+          </section>
+        </section>
 
         <!-- YouTube -->
         <section data-section-content="youtube" style="display:none;">
@@ -283,8 +291,6 @@
             <div id="ytResults" class="row g-2"></div>
           </div>
         </section>
-
-
 
       </section>
     </main>
@@ -319,11 +325,20 @@
     </footer>
   </aside>
 
+  <!-- Mobile Overlay -->
   <div class="mobile-overlay" id="mobileOverlay"></div>
 
-  <!-- Floating Video -->
-  <div id="floatingVideo" style="display:none; position:fixed; bottom:20px; right:20px; width:320px; height:180px; z-index:1000;">
-    <div id="floatingVideoInner" style="width:100%; height:100%;"></div>
+  <!-- ==========================
+    FLOATING VIDEO OVERLAY (UI only, iframe stays in videoContainer)
+  ========================== -->
+  <div id="floatingVideo" style="display:none; position:fixed; bottom:20px; right:20px; width:320px; height:180px; z-index:10000; background:rgba(0,0,0,0.9); border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.5); flex-direction:column; pointer-events:none;">
+    <div class="fv-header" style="cursor:move; padding:6px 10px; background:rgba(0,0,0,0.95); color:#fff; display:flex; justify-content:space-between; align-items:center; border-top-left-radius:10px; border-top-right-radius:10px; pointer-events:auto;">
+      <span style="font-size:0.85rem; font-weight:600;">📹 Floating Meeting</span>
+      <div style="display:flex; gap:8px;">
+        <button id="expandFloating" title="Expand to Meetings" style="background:none; border:none; color:#fff; font-size:1rem; cursor:pointer; padding:0 4px;">🔼</button>
+        <button id="closeFloating" title="Close Meeting" style="background:none; border:none; color:#fff; font-size:1rem; cursor:pointer; padding:0 4px;">❌</button>
+      </div>
+    </div>
   </div>
 
   <!-- Feather Icons Init -->
