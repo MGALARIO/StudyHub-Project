@@ -846,250 +846,158 @@ window.addEventListener('load', () => {
 
 
 
-// ==========================
-// App Script (Navigation + Meetings)
-// ==========================
 
-// ========== ICONS ==========
-if (window.feather) feather.replace();
+  // ==========================
+  // JITSI MEETING: dock/float + draggable/resizable
+  // ==========================
+  document.addEventListener('DOMContentLoaded', () => {
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const floatBtn = document.getElementById('floatBtn');
+  const openBtn = document.getElementById('openBtn');
+  const roomInput = document.getElementById('roomInput');
+  const videoContainer = document.getElementById('videoContainer');
+  const floatingJitsi = document.getElementById('floatingJitsi');
+  const floatingJitsiInner = document.getElementById('floatingJitsiInner');
+  const closeJitsiBtn = document.getElementById('closeJitsiBtn');
 
-// ========== NAVIGATION ==========
-const navLinks = document.querySelectorAll('[data-section]');
-const sections = document.querySelectorAll('[data-section-content]');
-const sectionTitle = document.getElementById('sectionTitle');
-const sectionSubtitle = document.getElementById('sectionSubtitle');
+  let jitsiIframe = null;
+  let isFloating = false;
 
-// show/hide sections
-function showSection(sectionName) {
-  sections.forEach(sec => {
-    sec.style.display = (sec.dataset.sectionContent === sectionName) ? 'block' : 'none';
-  });
-
-  navLinks.forEach(link => {
-    if(link.dataset.section === sectionName){
-      link.classList.add('active');
-    } else {
-      link.classList.remove('active');
-    }
-  });
-
-  // update titles dynamically
-  const titles = {
-    dashboard: ['Dashboard', 'Overview — quick glance'],
-    notes: ['Notes & Tasks', 'Manage your notes and reminders'],
-    meetings: ['Meetings', 'Start or join study calls'],
-    music: ['Live Radio', 'Enjoy stations from around the world'],
-    youtube: ['YouTube', 'Search and play videos']
-  };
-  if(titles[sectionName]){
-    sectionTitle.textContent = titles[sectionName][0];
-    sectionSubtitle.textContent = titles[sectionName][1];
+  function sanitizeRoom(name) {
+    if (!name || !name.trim()) return 'StudyHubRoom';
+    return name.trim().replace(/[^A-Za-z0-9_-]/g, '_') || 'StudyHubRoom';
   }
 
-  // handle iframe placement
-  handleIframePlacement(sectionName);
-}
-
-// sidebar & mobile nav clicks
-navLinks.forEach(link => {
-  link.addEventListener('click', e => {
-    e.preventDefault();
-    const sectionName = link.dataset.section;
-    showSection(sectionName);
-    // close mobile sidebar if open
-    const bsOffcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('mobileSidebar'));
-    if(bsOffcanvas) bsOffcanvas.hide();
-  });
-});
-
-// ==========================
-// MEETINGS FEATURE ==========
-const startBtn = document.getElementById('startBtn');
-const stopBtn = document.getElementById('stopBtn');
-const openBtn = document.getElementById('openBtn');
-const floatBtn = document.getElementById('floatBtn');
-const roomInput = document.getElementById('roomInput');
-const videoContainer = document.getElementById('videoContainer');
-const floatingVideo = document.getElementById('floatingVideo');
-const floatingInner = document.getElementById('floatingVideoInner');
-const closeFloating = document.getElementById('closeFloating');
-
-let iframeEl = null;
-let meetingActive = false;
-let isFloating = false;
-
-// sanitize room name
-function sanitizeRoom(name){
-  if(!name) return 'hello';
-  return name.trim().replace(/[^A-Za-z0-9_-]/g,'_') || 'hello';
-}
-
-// create iframe
-function createIframe(roomPath){
-  const src = `https://try.daily.co/${encodeURIComponent(roomPath)}`;
-  const f = document.createElement('iframe');
-  f.src = src;
-  f.allow = 'camera; microphone; fullscreen; display-capture; autoplay; clipboard-write';
-  f.style.width = '100%';
-  f.style.height = '100%';
-  f.style.border = '0';
-  f.style.borderRadius = '8px';
-  f.loading = 'lazy';
-  return f;
-}
-
-// start meeting
-function startMeeting(){
-  if(meetingActive) return;
-  
-  const rp = sanitizeRoom(roomInput.value);
-  iframeEl = createIframe(rp);
-
-  meetingActive = true;
-  startBtn.disabled = true;
-  stopBtn.disabled = false;
-  floatBtn.disabled = false;
-  openBtn.onclick = () => iframeEl && window.open(iframeEl.src, '_blank', 'noopener');
-
-  // Start inline
-  videoContainer.appendChild(iframeEl);
-  videoContainer.style.display = 'block';
-  floatingVideo.style.display = 'none';
-  isFloating = false;
-  floatBtn.textContent = '📌 Float';
-}
-
-// stop meeting
-function stopMeeting(){
-  if(iframeEl){
-    try { iframeEl.src = 'about:blank'; } catch(e){}
-    iframeEl.remove();
+  function createJitsiIframe(room) {
+    const f = document.createElement('iframe');
+    f.src = `https://meet.jit.si/${encodeURIComponent(room)}`;
+    f.allow = 'camera; microphone; fullscreen; display-capture; autoplay';
+    f.style.width = '100%';
+    f.style.height = '100%';
+    f.style.border = '0';
+    f.loading = 'lazy';
+    return f;
   }
-  iframeEl = null;
-  meetingActive = false;
-  isFloating = false;
-  
-  videoContainer.style.display = 'none';
-  floatingVideo.style.display = 'none';
-  startBtn.disabled = false;
-  stopBtn.disabled = true;
-  floatBtn.disabled = true;
-  floatBtn.textContent = '📌 Float';
-}
 
-// get current section
-function getCurrentSection(){
-  const s = Array.from(sections).find(x => x.style.display !== 'none');
-  return s ? s.dataset.sectionContent : 'dashboard';
-}
-
-// handle iframe placement
-function handleIframePlacement(activeSectionName){
-  if(!meetingActive || !iframeEl) return;
-
-  if(activeSectionName === 'meetings'){
-    if(isFloating) return; // Don't change if user floated it
-    
-    // Move back to inline if not floating
-    if(iframeEl.parentElement !== videoContainer){
-      videoContainer.appendChild(iframeEl);
-    }
+  function startMeeting() {
+    if (jitsiIframe) return;
+    const room = sanitizeRoom(roomInput?.value || '');
+    jitsiIframe = createJitsiIframe(room);
+    videoContainer.innerHTML = '';
+    videoContainer.appendChild(jitsiIframe);
     videoContainer.style.display = 'block';
-    floatingVideo.style.display = 'none';
-  } else {
-    // On other tabs
-    videoContainer.style.display = 'none';
-    if(isFloating){
-      floatingVideo.style.display = 'flex';
+    startBtn.disabled = true;
+    stopBtn.disabled = false;
+    floatBtn.disabled = false;
+    openBtn.onclick = () => window.open(jitsiIframe.src, '_blank', 'noopener');
+  }
+
+  function stopMeeting() {
+    if (jitsiIframe) {
+      try { jitsiIframe.src = 'about:blank'; } catch (e) {}
+      try { jitsiIframe.remove(); } catch (e) {}
+      jitsiIframe = null;
     }
+    videoContainer.innerHTML = '';
+    videoContainer.style.display = 'none';
+    floatingJitsiInner.innerHTML = '';
+    floatingJitsi.style.display = 'none';
+    floatingJitsi.style.left = '';
+    floatingJitsi.style.top = '';
+    isFloating = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    floatBtn.disabled = true;
+    floatBtn.textContent = '📌 Float';
   }
-}
 
-// ==========================
-// Floating video: draggable & resizable
-// ==========================
-function initFloatingVideo(){
-  if(typeof $ === 'undefined' || typeof $.fn.draggable === 'undefined') {
-    console.warn('jQuery UI not loaded - floating window will not be draggable/resizable');
-    return;
-  }
-  
-  try {
-    const $floating = $('#floatingVideo');
-    
-    $floating.draggable({
-      handle: ".fv-header",
-      containment: "window",
-      cancel: "#floatingVideoInner"
-    });
-    
-    $floating.resizable({
-      aspectRatio: 16 / 9,
-      minWidth: 200,
-      minHeight: 112.5,
-      handles: "n, e, s, w, ne, se, sw, nw"
-    });
-    
-    console.log('✓ Floating video is draggable & resizable');
-  } catch(e){
-    console.warn("Floating video init failed:", e);
-  }
-}
-
-// ==========================
-// Event Listeners
-// ==========================
-startBtn.addEventListener('click', startMeeting);
-stopBtn.addEventListener('click', stopMeeting);
-
-// Float button - Move iframe WITHOUT reloading
-if(floatBtn){
-  floatBtn.addEventListener('click', (ev) => {
-    ev.preventDefault();
-    if(!meetingActive || !iframeEl) return;
-    
-    isFloating = !isFloating;
-    
-    if(isFloating){
-      // Move to floating - appendChild moves the node without reload
-      floatingInner.appendChild(iframeEl);
-      floatingVideo.style.display = 'flex';
+  function toggleFloat() {
+    if (!jitsiIframe) return;
+    if (!isFloating) {
+      floatingJitsiInner.appendChild(jitsiIframe);
+      floatingJitsi.style.display = 'flex';
       videoContainer.style.display = 'none';
+      isFloating = true;
       floatBtn.textContent = '📍 Dock';
     } else {
-      // Move back to inline
-      videoContainer.appendChild(iframeEl);
-      floatingVideo.style.display = 'none';
-      const currentSection = getCurrentSection();
-      if(currentSection === 'meetings'){
-        videoContainer.style.display = 'block';
-      }
+      videoContainer.appendChild(jitsiIframe);
+      floatingJitsi.style.display = 'none';
+      videoContainer.style.display = 'block';
+      isFloating = false;
       floatBtn.textContent = '📌 Float';
     }
-  });
-}
+  }
 
-if(closeFloating) {
-  closeFloating.addEventListener('click', ev => { 
-    ev.preventDefault(); 
+  // Direct close button only — no delegation
+  closeJitsiBtn?.addEventListener('click', (ev) => {
+    ev.preventDefault();
     stopMeeting();
   });
-}
 
-document.getElementById('startMeetBtn')?.addEventListener('click', e => { 
-  e.preventDefault(); 
-  showSection('meetings'); 
-  startMeeting(); 
+  // Drag and resize
+  (function initFloatingControls() {
+    const el = floatingJitsi;
+    const header = el.querySelector('.fw-header');
+    if (!el || !header) return;
+
+    // Drag
+    let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
+    header.style.cursor = 'move';
+    header.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      dragging = true;
+      const r = el.getBoundingClientRect();
+      sl = r.left; st = r.top; sx = e.clientX; sy = e.clientY;
+      header.setPointerCapture?.(e.pointerId);
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!dragging) return;
+      const dx = e.clientX - sx, dy = e.clientY - sy;
+      const vw = window.innerWidth, vh = window.innerHeight;
+      const r = el.getBoundingClientRect();
+      const nl = Math.min(Math.max(0, sl + dx), vw - r.width);
+      const nt = Math.min(Math.max(0, st + dy), vh - r.height);
+      el.style.left = nl + 'px';
+      el.style.top = nt + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+    });
+    window.addEventListener('pointerup', () => dragging = false);
+
+    // Resize
+    let handle = el.querySelector('.floating-resize-handle');
+    if (!handle) {
+      handle = document.createElement('div');
+      handle.className = 'floating-resize-handle';
+      Object.assign(handle.style, {
+        position: 'absolute', width: '18px', height: '18px', right: '6px', bottom: '6px',
+        cursor: 'nwse-resize', zIndex: '1100', background: 'rgba(255,255,255,0.12)'
+      });
+      el.appendChild(handle);
+    }
+    let resizing = false, startW = 0, startX = 0, aspect = 16 / 9, minW = 200;
+    handle.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      resizing = true;
+      const r = el.getBoundingClientRect();
+      startW = r.width;
+      startX = e.clientX;
+      handle.setPointerCapture?.(e.pointerId);
+    });
+    window.addEventListener('pointermove', (e) => {
+      if (!resizing) return;
+      const dx = e.clientX - startX;
+      let nw = Math.max(minW, startW + dx);
+      nw = Math.min(nw, window.innerWidth - 20);
+      el.style.width = nw + 'px';
+      el.style.height = (nw / aspect) + 'px';
+    });
+    window.addEventListener('pointerup', () => resizing = false);
+  })();
+
+  // Event listeners
+  startBtn?.addEventListener('click', startMeeting);
+  stopBtn?.addEventListener('click', stopMeeting);
+  floatBtn?.addEventListener('click', toggleFloat);
 });
-
-document.getElementById('mobileQuickMeet')?.addEventListener('click', e => { 
-  e.preventDefault(); 
-  showSection('meetings'); 
-  startMeeting(); 
-});
-
-// Initialize draggable & resizable
-initFloatingVideo();
-
-// Start at dashboard by default
-showSection('dashboard');
