@@ -1015,7 +1015,6 @@ const ytResults = document.getElementById('ytResults');
 const ytSearchInput = document.getElementById('ytSearch');
 const ytInlinePlayer = document.getElementById('ytInlinePlayer');
 const ytInlineIframe = document.getElementById('ytInlineIframe');
-const ytCloseInline = document.getElementById('ytCloseInline');
 const floatingVideo = document.getElementById('floatingVideo');
 const floatingVideoInner = document.getElementById('floatingVideoInner');
 const ytFloatClose = document.getElementById('ytFloatClose');
@@ -1028,7 +1027,22 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// CHANGED: Create YouTube card with proper button handlers
+// ADDED: Stop all players
+function stopAllPlayers() {
+  // Stop inline player
+  if (ytInlineIframe && ytInlinePlayer.style.display !== 'none') {
+    ytInlineIframe.src = '';
+    ytInlinePlayer.style.display = 'none';
+  }
+  
+  // Stop floating player
+  if (floatingVideoInner && floatingVideo.style.display !== 'none') {
+    floatingVideoInner.innerHTML = '';
+    floatingVideo.style.display = 'none';
+  }
+}
+
+// Create YouTube card with proper button handlers
 function createYTCard(item) {
   const id = item.id.videoId;
   const title = item.snippet.title;
@@ -1155,7 +1169,7 @@ async function searchYouTube() {
       ytResults.appendChild(createYTCard(item));
     });
     
-    // CHANGED: Play button now shows inline player
+    // CHANGED: Play button stops other player and shows inline
     ytResults.querySelectorAll('[data-video]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1165,7 +1179,7 @@ async function searchYouTube() {
       });
     });
     
-    // CHANGED: Float button opens floating player
+    // CHANGED: Float button stops other player and opens floating
     ytResults.querySelectorAll('[data-video-float]').forEach(btn => {
       btn.addEventListener('click', (e) => {
         e.preventDefault();
@@ -1199,8 +1213,15 @@ async function searchYouTube() {
   }
 }
 
-// ADDED: Play video inline (inside the page)
+// CHANGED: Play video inline (stops floating player first)
 function playInlineVideo(videoId) {
+  // Stop floating player if it's playing
+  if (floatingVideo.style.display !== 'none') {
+    floatingVideoInner.innerHTML = '';
+    floatingVideo.style.display = 'none';
+    console.log('🔴 Stopped floating player');
+  }
+  
   ytInlineIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
   ytInlinePlayer.style.display = 'block';
   
@@ -1210,19 +1231,19 @@ function playInlineVideo(videoId) {
   console.log('✅ Inline player opened');
 }
 
-// ADDED: Close inline player
-ytCloseInline?.addEventListener('click', () => {
-  ytInlineIframe.src = '';
-  ytInlinePlayer.style.display = 'none';
-  console.log('🔴 Inline player closed');
-});
-
-// CHANGED: Open floating video window
+// CHANGED: Open floating video window (stops inline player first)
 function openFloatingVideo(videoId) {
   if (!floatingVideo || !floatingVideoInner) {
     console.error('❌ Floating video elements not found');
     alert('Floating player not available. Make sure the HTML includes the floating video container.');
     return;
+  }
+  
+  // Stop inline player if it's playing
+  if (ytInlinePlayer.style.display !== 'none') {
+    ytInlineIframe.src = '';
+    ytInlinePlayer.style.display = 'none';
+    console.log('🔴 Stopped inline player');
   }
   
   console.log('🎬 Loading video in floating player:', videoId);
@@ -1247,14 +1268,14 @@ function openFloatingVideo(videoId) {
   console.log('✅ Floating player opened');
 }
 
-// ADDED: Close floating player
+// Close floating player
 ytFloatClose?.addEventListener('click', () => {
   floatingVideoInner.innerHTML = '';
   floatingVideo.style.display = 'none';
   console.log('🔴 Floating player closed');
 });
 
-// ADDED: Make floating window draggable (if jQuery UI available)
+// Make floating window draggable (if jQuery UI available)
 if (typeof $ !== 'undefined' && $.fn.draggable) {
   $(document).ready(function() {
     $('#floatingVideo').draggable({
@@ -1281,6 +1302,7 @@ ytSearchInput?.addEventListener('keypress', (e) => {
 // Public API
 window.openFloatingYTEmbed = openFloatingVideo;
 window.playInlineYT = playInlineVideo;
+window.stopAllYTPlayers = stopAllPlayers;
 
 // Diagnostic function
 function testYouTubeAPI() {
