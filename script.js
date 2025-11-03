@@ -1001,3 +1001,302 @@ window.addEventListener('load', () => {
   stopBtn?.addEventListener('click', stopMeeting);
   floatBtn?.addEventListener('click', toggleFloat);
 });
+
+
+// =========================
+// YouTube Search Module
+// =========================
+
+const YT_KEY = "AIzaSyCEhAQaMVE0_FF9voohcCOmN2xj0bTcF8I";
+
+// Element references
+const ytBtn = document.getElementById('ytSearchBtn');
+const ytResults = document.getElementById('ytResults');
+const ytSearchInput = document.getElementById('ytSearch');
+const ytInlinePlayer = document.getElementById('ytInlinePlayer');
+const ytInlineIframe = document.getElementById('ytInlineIframe');
+const ytCloseInline = document.getElementById('ytCloseInline');
+const floatingVideo = document.getElementById('floatingVideo');
+const floatingVideoInner = document.getElementById('floatingVideoInner');
+const ytFloatClose = document.getElementById('ytFloatClose');
+
+// Escape HTML function
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+// CHANGED: Create YouTube card with proper button handlers
+function createYTCard(item) {
+  const id = item.id.videoId;
+  const title = item.snippet.title;
+  const channelTitle = item.snippet.channelTitle || 'Unknown Channel';
+  const thumb = item.snippet.thumbnails?.medium?.url || 
+                item.snippet.thumbnails?.default?.url || 
+                'https://via.placeholder.com/320x180?text=No+Thumbnail';
+  
+  const col = document.createElement('div');
+  col.className = 'col-md-3 col-sm-6 col-12';
+  
+  const card = document.createElement('div');
+  card.className = 'yt-card';
+  card.innerHTML = `
+    <div class="yt-thumb">
+      <img src="${thumb}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180?text=Error'">
+    </div>
+    <div class="yt-info">
+      <div class="yt-title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+      <div class="yt-channel" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
+      <div class="yt-actions">
+        <button class="btn btn-sm btn-success" data-video="${id}" title="Play inline">
+          <i data-feather="play"></i> <span>Play</span>
+        </button>
+        <button class="btn btn-sm btn-outline-secondary" data-video-float="${id}" title="Open in floating player">
+          <i data-feather="maximize-2"></i> <span>Float</span>
+        </button>
+      </div>
+    </div>
+  `;
+  
+  col.appendChild(card);
+  
+  if (typeof feather !== 'undefined') {
+    setTimeout(() => feather.replace(), 10);
+  }
+  
+  return col;
+}
+
+// Main search function
+async function searchYouTube() {
+  const query = ytSearchInput?.value?.trim();
+  
+  if (!query) {
+    alert('Please enter a search term to find YouTube videos.');
+    ytSearchInput?.focus();
+    return;
+  }
+  
+  ytResults.innerHTML = `
+    <div class="col-12">
+      <div class="yt-loading">
+        <div class="spinner"></div>
+        <div class="small-muted">Searching YouTube for "${escapeHtml(query)}"...</div>
+      </div>
+    </div>
+  `;
+  
+  try {
+    const url = `https://www.googleapis.com/youtube/v3/search?` + 
+                `part=snippet&type=video&maxResults=12&` +
+                `q=${encodeURIComponent(query)}&key=${YT_KEY}`;
+    
+    console.log('🔍 YouTube Search:', query);
+    
+    const response = await fetch(url);
+    const data = await response.json();
+    
+    console.log('📦 API Response:', data);
+    
+    if (data.error) {
+      console.error('❌ YouTube API Error:', data.error);
+      
+      let errorMessage = data.error.message;
+      let errorDetails = '';
+      
+      if (data.error.code === 403) {
+        if (data.error.message.includes('quotaExceeded')) {
+          errorMessage = 'Daily API quota exceeded';
+          errorDetails = 'The YouTube API key has reached its daily limit. Try again tomorrow.';
+        } else if (data.error.message.includes('keyInvalid')) {
+          errorMessage = 'Invalid API key';
+          errorDetails = 'The YouTube API key is invalid or has been disabled.';
+        } else {
+          errorMessage = 'Access forbidden';
+          errorDetails = 'The API key may be restricted. Check Google Cloud Console.';
+        }
+      }
+      
+      ytResults.innerHTML = `
+        <div class="col-12">
+          <div class="card-ui error-state">
+            <div style="text-align:center; padding:2rem;">
+              <div style="font-size:3rem; margin-bottom:1rem;">⚠️</div>
+              <h5 style="color:var(--accent); margin-bottom:0.5rem;">${escapeHtml(errorMessage)}</h5>
+              <p class="small-muted" style="margin-bottom:1rem;">${escapeHtml(errorDetails)}</p>
+              <small class="text-muted">Error Code: ${data.error.code}</small>
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+    
+    if (!data.items || data.items.length === 0) {
+      ytResults.innerHTML = `
+        <div class="col-12">
+          <div class="yt-empty-state">
+            <svg data-feather="search" style="width:64px;height:64px;opacity:0.3;margin-bottom:1rem;"></svg>
+            <h5>No results found</h5>
+            <p class="small-muted">No videos found for "${escapeHtml(query)}". Try different keywords.</p>
+          </div>
+        </div>
+      `;
+      if (typeof feather !== 'undefined') feather.replace();
+      return;
+    }
+    
+    console.log(`✅ Found ${data.items.length} videos`);
+    ytResults.innerHTML = '';
+    
+    data.items.forEach(item => {
+      ytResults.appendChild(createYTCard(item));
+    });
+    
+    // CHANGED: Play button now shows inline player
+    ytResults.querySelectorAll('[data-video]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const videoId = e.currentTarget.getAttribute('data-video');
+        console.log('▶️ Playing inline:', videoId);
+        playInlineVideo(videoId);
+      });
+    });
+    
+    // CHANGED: Float button opens floating player
+    ytResults.querySelectorAll('[data-video-float]').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        const videoId = e.currentTarget.getAttribute('data-video-float');
+        console.log('🔳 Opening floating player:', videoId);
+        openFloatingVideo(videoId);
+      });
+    });
+    
+    if (typeof feather !== 'undefined') {
+      feather.replace();
+    }
+    
+  } catch (error) {
+    console.error('❌ Network Error:', error);
+    
+    ytResults.innerHTML = `
+      <div class="col-12">
+        <div class="card-ui error-state">
+          <div style="text-align:center; padding:2rem;">
+            <div style="font-size:3rem; margin-bottom:1rem;">🔌</div>
+            <h5 style="color:var(--accent); margin-bottom:0.5rem;">Connection Error</h5>
+            <p class="small-muted" style="margin-bottom:1rem;">
+              Unable to connect to YouTube API. Check your internet connection.
+            </p>
+            <small class="text-muted">${escapeHtml(error.message)}</small>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+}
+
+// ADDED: Play video inline (inside the page)
+function playInlineVideo(videoId) {
+  ytInlineIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+  ytInlinePlayer.style.display = 'block';
+  
+  // Scroll to player
+  ytInlinePlayer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  
+  console.log('✅ Inline player opened');
+}
+
+// ADDED: Close inline player
+ytCloseInline?.addEventListener('click', () => {
+  ytInlineIframe.src = '';
+  ytInlinePlayer.style.display = 'none';
+  console.log('🔴 Inline player closed');
+});
+
+// CHANGED: Open floating video window
+function openFloatingVideo(videoId) {
+  if (!floatingVideo || !floatingVideoInner) {
+    console.error('❌ Floating video elements not found');
+    alert('Floating player not available. Make sure the HTML includes the floating video container.');
+    return;
+  }
+  
+  console.log('🎬 Loading video in floating player:', videoId);
+  
+  floatingVideoInner.innerHTML = `
+    <iframe 
+      src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+      allowfullscreen
+      frameborder="0" 
+      style="width:100%; height:100%; border:0; display:block;">
+    </iframe>
+  `;
+  
+  floatingVideo.style.display = 'flex';
+  
+  // Re-render feather icons
+  if (typeof feather !== 'undefined') {
+    setTimeout(() => feather.replace(), 10);
+  }
+  
+  console.log('✅ Floating player opened');
+}
+
+// ADDED: Close floating player
+ytFloatClose?.addEventListener('click', () => {
+  floatingVideoInner.innerHTML = '';
+  floatingVideo.style.display = 'none';
+  console.log('🔴 Floating player closed');
+});
+
+// ADDED: Make floating window draggable (if jQuery UI available)
+if (typeof $ !== 'undefined' && $.fn.draggable) {
+  $(document).ready(function() {
+    $('#floatingVideo').draggable({
+      handle: '.fv-header',
+      containment: 'window'
+    });
+    console.log('✅ Floating video is draggable');
+  });
+}
+
+// Event listeners
+ytBtn?.addEventListener('click', (e) => {
+  e.preventDefault();
+  searchYouTube();
+});
+
+ytSearchInput?.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    searchYouTube();
+  }
+});
+
+// Public API
+window.openFloatingYTEmbed = openFloatingVideo;
+window.playInlineYT = playInlineVideo;
+
+// Diagnostic function
+function testYouTubeAPI() {
+  console.log('🧪 Testing YouTube API...');
+  fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=test&key=${YT_KEY}`)
+    .then(r => r.json())
+    .then(data => {
+      if (data.error) {
+        console.error('❌ API Test Failed:', data.error);
+      } else {
+        console.log('✅ API Test Successful!');
+      }
+    })
+    .catch(err => console.error('❌ Network Error:', err));
+}
+
+window.testYouTubeAPI = testYouTubeAPI;
+
+console.log('✅ YouTube module loaded');

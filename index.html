@@ -274,26 +274,74 @@
           </section>
         </section>
 
-        <!-- YouTube -->
+        <!-- YouTube Section -->
         <section data-section-content="youtube" style="display:none;">
           <div class="card-ui">
-            <div class="d-flex align-items-center justify-content-between">
+            <!-- Header -->
+            <div class="d-flex align-items-center justify-content-between mb-3">
               <div>
-                <div class="section-title"><i data-feather="youtube"></i> YouTube</div>
-                <div class="small-muted">Search and play videos</div>
+                <div class="section-title">
+                  <i data-feather="youtube"></i> YouTube
+                </div>
+                <div class="small-muted">Search and play videos inline or in floating player</div>
               </div>
             </div>
 
-            <div class="input-group mt-2 mb-2">
-              <input id="ytSearch" class="form-control" placeholder="Search YouTube...">
-              <button id="ytSearchBtn" class="btn btn-primary">Search</button>
+            <!-- Search Bar -->
+            <div class="input-group mt-2 mb-3">
+              <input 
+                id="ytSearch" 
+                class="form-control" 
+                placeholder="Search YouTube videos..." 
+                type="text"
+                aria-label="YouTube search query"
+              >
+              <button 
+                id="ytSearchBtn" 
+                class="btn btn-primary"
+                type="button"
+              >
+                <i data-feather="search"></i> Search
+              </button>
             </div>
 
-            <!-- Results grid -->
+            <!-- ADDED: Inline Video Player (shows when user clicks Play) -->
+            <div id="ytInlinePlayer" style="display:none; margin-bottom:1rem;">
+              <div style="position:relative; padding-bottom:56.25%; height:0; background:#000; border-radius:var(--card-radius); overflow:hidden;">
+                <iframe 
+                  id="ytInlineIframe"
+                  style="position:absolute; top:0; left:0; width:100%; height:100%; border:0;"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen
+                ></iframe>
+              </div>
+              <div style="margin-top:0.5rem; text-align:right;">
+                <button id="ytCloseInline" class="btn btn-sm btn-outline-danger">
+                  <i data-feather="x"></i> Close Player
+                </button>
+              </div>
+            </div>
+
+            <!-- Results Grid Container -->
             <div id="ytResults" class="row g-2"></div>
           </div>
         </section>
 
+        <!-- ADDED: Floating Video Window (appears at bottom-right when Float is clicked) -->
+        <div id="floatingVideo" class="floating-mode" style="display:none;">
+          <div class="fv-header">
+            <div style="display:flex; align-items:center; gap:0.5rem;">
+              <i data-feather="youtube" style="width:16px; height:16px;"></i>
+              <span>YouTube Player</span>
+            </div>
+            <div style="display:flex; gap:0.4rem;">
+              <button id="ytFloatClose" class="btn btn-sm btn-danger" style="padding:2px 8px; border-radius:6px;" title="Close floating player">
+                ×
+              </button>
+            </div>
+          </div>
+          <div id="floatingVideoInner"></div>
+        </div>
       </section>
     </main>
   </div>
