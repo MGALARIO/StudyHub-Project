@@ -962,7 +962,7 @@ window.addEventListener('load', () => {
 
 
 
- // ==========================
+// ==========================
   // JITSI MEETING: dock/float + draggable/resizable (MOBILE-FRIENDLY)
   // ==========================
   document.addEventListener('DOMContentLoaded', () => {
@@ -1044,21 +1044,14 @@ window.addEventListener('load', () => {
     }
   }
 
-  // Close button handler with mobile touch support
+  // Close button handler - simple and direct
   if (closeJitsiBtn) {
-    // Mouse/pointer click
-    closeJitsiBtn.addEventListener('click', (ev) => {
+    closeJitsiBtn.onclick = (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
+      console.log('Jitsi close clicked');
       stopMeeting();
-    });
-    
-    // Mobile touch
-    closeJitsiBtn.addEventListener('touchend', (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      stopMeeting();
-    });
+    };
   }
 
   // ENHANCED: Mobile-friendly drag and resize with touch support
