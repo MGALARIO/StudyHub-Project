@@ -962,8 +962,8 @@ window.addEventListener('load', () => {
 
 
 
-  // ==========================
-  // JITSI MEETING: dock/float + draggable/resizable
+ // ==========================
+  // JITSI MEETING: dock/float + draggable/resizable (MOBILE-FRIENDLY)
   // ==========================
   document.addEventListener('DOMContentLoaded', () => {
   const startBtn = document.getElementById('startBtn');
@@ -1050,65 +1050,171 @@ window.addEventListener('load', () => {
     stopMeeting();
   });
 
-  // Drag and resize
+  // ENHANCED: Mobile-friendly drag and resize with touch support
   (function initFloatingControls() {
     const el = floatingJitsi;
     const header = el.querySelector('.fw-header');
     if (!el || !header) return;
 
-    // Drag
-    let dragging = false, sx = 0, sy = 0, sl = 0, st = 0;
-    header.style.cursor = 'move';
-    header.addEventListener('pointerdown', (e) => {
+    // Touch/Pointer Drag Support
+    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
+    
+    header.style.cursor = 'grab';
+    header.style.touchAction = 'none'; // Prevent scrolling while dragging
+    
+    function startDrag(e) {
+      // Prevent default to stop scrolling on mobile
       e.preventDefault();
+      
       dragging = true;
-      const r = el.getBoundingClientRect();
-      sl = r.left; st = r.top; sx = e.clientX; sy = e.clientY;
-      header.setPointerCapture?.(e.pointerId);
-    });
-    window.addEventListener('pointermove', (e) => {
+      header.style.cursor = 'grabbing';
+      
+      const rect = el.getBoundingClientRect();
+      startLeft = rect.left;
+      startTop = rect.top;
+      
+      // Support both touch and mouse
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      startX = clientX;
+      startY = clientY;
+      
+      // Capture pointer for mouse
+      if (e.pointerId) {
+        header.setPointerCapture(e.pointerId);
+      }
+    }
+    
+    function doDrag(e) {
       if (!dragging) return;
-      const dx = e.clientX - sx, dy = e.clientY - sy;
-      const vw = window.innerWidth, vh = window.innerHeight;
-      const r = el.getBoundingClientRect();
-      const nl = Math.min(Math.max(0, sl + dx), vw - r.width);
-      const nt = Math.min(Math.max(0, st + dy), vh - r.height);
-      el.style.left = nl + 'px';
-      el.style.top = nt + 'px';
+      
+      // Get current position (touch or mouse)
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - startX;
+      const deltaY = clientY - startY;
+      
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const rect = el.getBoundingClientRect();
+      
+      // Calculate new position with boundaries
+      let newLeft = Math.max(0, Math.min(startLeft + deltaX, viewportWidth - rect.width));
+      let newTop = Math.max(0, Math.min(startTop + deltaY, viewportHeight - rect.height));
+      
+      el.style.left = newLeft + 'px';
+      el.style.top = newTop + 'px';
       el.style.right = 'auto';
       el.style.bottom = 'auto';
-    });
-    window.addEventListener('pointerup', () => dragging = false);
-
-    // Resize
-    let handle = el.querySelector('.floating-resize-handle');
-    if (!handle) {
-      handle = document.createElement('div');
-      handle.className = 'floating-resize-handle';
-      Object.assign(handle.style, {
-        position: 'absolute', width: '18px', height: '18px', right: '6px', bottom: '6px',
-        cursor: 'nwse-resize', zIndex: '1100', background: 'rgba(255,255,255,0.12)'
-      });
-      el.appendChild(handle);
     }
-    let resizing = false, startW = 0, startX = 0, aspect = 16 / 9, minW = 200;
-    handle.addEventListener('pointerdown', (e) => {
+    
+    function endDrag() {
+      if (!dragging) return;
+      dragging = false;
+      header.style.cursor = 'grab';
+    }
+    
+    // Add event listeners for both touch and mouse
+    header.addEventListener('pointerdown', startDrag);
+    header.addEventListener('touchstart', startDrag, { passive: false });
+    
+    window.addEventListener('pointermove', doDrag);
+    window.addEventListener('touchmove', doDrag, { passive: false });
+    
+    window.addEventListener('pointerup', endDrag);
+    window.addEventListener('touchend', endDrag);
+    window.addEventListener('touchcancel', endDrag);
+
+    // ENHANCED: Mobile-friendly resize handle
+    let resizeHandle = el.querySelector('.jitsi-resize-handle');
+    if (!resizeHandle) {
+      resizeHandle = document.createElement('div');
+      resizeHandle.className = 'jitsi-resize-handle';
+      Object.assign(resizeHandle.style, {
+        position: 'absolute',
+        width: '32px',  // Larger for touch
+        height: '32px',
+        right: '0',
+        bottom: '0',
+        cursor: 'nwse-resize',
+        zIndex: '1100',
+        background: 'rgba(255,107,95,0.3)',
+        borderRadius: '0 0 10px 0',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        fontSize: '16px',
+        color: 'rgba(255,255,255,0.7)',
+        touchAction: 'none'
+      });
+      resizeHandle.innerHTML = '⇲';
+      el.appendChild(resizeHandle);
+    }
+    
+    let resizing = false, resizeStartW = 0, resizeStartH = 0, resizeStartX = 0, resizeStartY = 0;
+    const aspectRatio = 16 / 9;
+    const minWidth = 200;
+    const minHeight = 150;
+    
+    function startResize(e) {
       e.preventDefault();
+      e.stopPropagation();
+      
       resizing = true;
-      const r = el.getBoundingClientRect();
-      startW = r.width;
-      startX = e.clientX;
-      handle.setPointerCapture?.(e.pointerId);
-    });
-    window.addEventListener('pointermove', (e) => {
+      const rect = el.getBoundingClientRect();
+      resizeStartW = rect.width;
+      resizeStartH = rect.height;
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      resizeStartX = clientX;
+      resizeStartY = clientY;
+      
+      if (e.pointerId) {
+        resizeHandle.setPointerCapture(e.pointerId);
+      }
+    }
+    
+    function doResize(e) {
       if (!resizing) return;
-      const dx = e.clientX - startX;
-      let nw = Math.max(minW, startW + dx);
-      nw = Math.min(nw, window.innerWidth - 20);
-      el.style.width = nw + 'px';
-      el.style.height = (nw / aspect) + 'px';
-    });
-    window.addEventListener('pointerup', () => resizing = false);
+      
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      
+      const deltaX = clientX - resizeStartX;
+      const deltaY = clientY - resizeStartY;
+      
+      // Use the larger delta to maintain aspect ratio
+      const delta = Math.max(deltaX, deltaY);
+      
+      let newWidth = Math.max(minWidth, resizeStartW + delta);
+      newWidth = Math.min(newWidth, window.innerWidth - 20);
+      
+      let newHeight = newWidth / aspectRatio;
+      newHeight = Math.max(minHeight, newHeight);
+      
+      el.style.width = newWidth + 'px';
+      el.style.height = newHeight + 'px';
+    }
+    
+    function endResize() {
+      resizing = false;
+    }
+    
+    resizeHandle.addEventListener('pointerdown', startResize);
+    resizeHandle.addEventListener('touchstart', startResize, { passive: false });
+    
+    window.addEventListener('pointermove', doResize);
+    window.addEventListener('touchmove', doResize, { passive: false });
+    
+    window.addEventListener('pointerup', endResize);
+    window.addEventListener('touchend', endResize);
+    window.addEventListener('touchcancel', endResize);
+    
+    console.log('✅ Jitsi floating controls initialized (mobile-friendly)');
   })();
 
   // Event listeners
@@ -1116,7 +1222,6 @@ window.addEventListener('load', () => {
   stopBtn?.addEventListener('click', stopMeeting);
   floatBtn?.addEventListener('click', toggleFloat);
 });
-
 
 // =========================
 // YouTube Search Module
