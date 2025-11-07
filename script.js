@@ -1044,9 +1044,17 @@ window.addEventListener('load', () => {
     }
   }
 
-  // Close button handler
+  // Close button handler with mobile touch support
   if (closeJitsiBtn) {
+    // Mouse/pointer click
     closeJitsiBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      stopMeeting();
+    });
+    
+    // Mobile touch
+    closeJitsiBtn.addEventListener('touchend', (ev) => {
       ev.preventDefault();
       ev.stopPropagation();
       stopMeeting();
@@ -1066,8 +1074,9 @@ window.addEventListener('load', () => {
     header.style.touchAction = 'none';
     
     function startDrag(e) {
-      // Don't start drag if clicking close button
+      // Don't start drag if clicking/touching close button
       if (e.target.id === 'closeJitsiBtn' || e.target.closest('#closeJitsiBtn')) {
+        e.stopPropagation();
         return;
       }
       
@@ -1228,7 +1237,11 @@ window.addEventListener('load', () => {
   startBtn?.addEventListener('click', startMeeting);
   stopBtn?.addEventListener('click', stopMeeting);
   floatBtn?.addEventListener('click', toggleFloat);
+  
+  // Make startMeeting globally accessible for Quick Meet
+  window.startMeeting = startMeeting;
 });
+
 
 // =========================
 // YouTube Search Module
