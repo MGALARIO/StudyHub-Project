@@ -545,16 +545,73 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }, 1000);
 
-  // Enable audio autoplay after first user interaction
-  function unlockAudioOnce() { 
+// Enable audio autoplay after first user interaction (MOBILE-FRIENDLY)
+  let audioUnlocked = false;
+  
+  function unlockAudio() { 
+    if (audioUnlocked) return;
+    
     const base = document.getElementById('alarmAudio'); 
     if (base) { 
-      base.play().then(() => base.pause()).catch(() => {}); 
-    } 
-    document.removeEventListener('click', unlockAudioOnce); 
+      // Try to play and immediately pause to unlock audio context
+      base.play().then(() => {
+        base.pause();
+        base.currentTime = 0;
+        audioUnlocked = true;
+        console.log('✅ Audio unlocked for alarms');
+      }).catch(err => {
+        console.warn('⚠️ Audio unlock failed:', err);
+      }); 
+    }
   }
-  document.addEventListener('click', unlockAudioOnce);
+  
+  // Listen to multiple interaction events for better mobile support
+  ['click', 'touchstart', 'touchend', 'keydown'].forEach(eventType => {
+    document.addEventListener(eventType, unlockAudio, { once: true, passive: true });
+  });
 
+  // Test Alarm Button (Mobile-friendly)
+  document.getElementById('testAlarmBtn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    const audio = document.getElementById('alarmAudio');
+    
+    if (!audio) {
+      alert('❌ Alarm audio not found');
+      return;
+    }
+    
+    // Force unlock audio first
+    unlockAudio();
+    
+    // Play test alarm after short delay
+    setTimeout(() => {
+      const playPromise = audio.play();
+      
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          console.log('✅ Test alarm playing');
+          alert('🔔 Alarm test successful! You should hear a beep sound.');
+          
+          // Stop after 2 seconds
+          setTimeout(() => {
+            audio.pause();
+            audio.currentTime = 0;
+          }, 2000);
+        }).catch(error => {
+          console.error('❌ Test alarm failed:', error);
+          
+          // Try vibration on mobile
+          if ('vibrate' in navigator) {
+            navigator.vibrate([200, 100, 200, 100, 200]);
+            alert('⚠️ Sound blocked by browser.\n📳 Using vibration instead.\n\nTip: Allow sound in browser settings.');
+          } else {
+            alert('⚠️ Alarm sound blocked by your browser.\n\nPlease:\n1. Check browser sound settings\n2. Make sure phone is not on silent\n3. Allow notifications for this site');
+          }
+        });
+      }
+    }, 100);
+  });
+  
   // --- ANNOUNCEMENTS SYSTEM ---
   // Update dashboard announcements with due/overdue tasks
   const announcementsEl = document.getElementById('announcements');
