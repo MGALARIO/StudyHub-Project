@@ -1044,11 +1044,14 @@ window.addEventListener('load', () => {
     }
   }
 
-  // Direct close button only — no delegation
-  closeJitsiBtn?.addEventListener('click', (ev) => {
-    ev.preventDefault();
-    stopMeeting();
-  });
+  // Close button handler
+  if (closeJitsiBtn) {
+    closeJitsiBtn.addEventListener('click', (ev) => {
+      ev.preventDefault();
+      ev.stopPropagation();
+      stopMeeting();
+    });
+  }
 
   // ENHANCED: Mobile-friendly drag and resize with touch support
   (function initFloatingControls() {
@@ -1060,10 +1063,14 @@ window.addEventListener('load', () => {
     let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
     
     header.style.cursor = 'grab';
-    header.style.touchAction = 'none'; // Prevent scrolling while dragging
+    header.style.touchAction = 'none';
     
     function startDrag(e) {
-      // Prevent default to stop scrolling on mobile
+      // Don't start drag if clicking close button
+      if (e.target.id === 'closeJitsiBtn' || e.target.closest('#closeJitsiBtn')) {
+        return;
+      }
+      
       e.preventDefault();
       
       dragging = true;
