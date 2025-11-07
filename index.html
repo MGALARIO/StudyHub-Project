@@ -25,7 +25,7 @@
   <!-- Custom CSS -->
   <link rel="stylesheet" href="style.css">
 </head>
-<body>
+<body data-theme="light">
 
   <!-- ==========================
     App Shell
@@ -80,6 +80,14 @@
         <div>
           <h2 class="page-title" id="sectionTitle">Dashboard</h2>
           <p class="page-sub" id="sectionSubtitle">Overview — quick glance</p>
+        </div>
+        
+        <!-- Theme Toggle Button -->
+        <div class="top-controls d-flex align-items-center gap-2">
+          <button id="themeToggle" class="btn btn-theme-toggle" title="Toggle theme" aria-label="Toggle theme">
+            <i data-feather="sun" class="theme-icon-light"></i>
+            <i data-feather="moon" class="theme-icon-dark"></i>
+          </button>
         </div>
       </header>
 
@@ -163,7 +171,7 @@
                 </div>
                 <button type="submit" class="btn btn-success">Save Note</button>
               </form>
-              <audio id="alarmAudio" src="alarm.mp3" preload="auto"></audio>
+              <audio id="alarmAudio" src="https://www.soundjay.com/buttons/beep-07.mp3" preload="auto"></audio>
             </div>
             <div id="notesList" style="margin-top:1rem;"></div>
             <div id="missedHistory" style="margin-top:1rem;"></div>
@@ -216,7 +224,6 @@
           </div>
           <div id="floatingJitsiInner" style="flex:1; width:100%; height:calc(100% - 30px);"></div>
         </div>
-
 
         <!-- Radio / Music -->
         <section data-section-content="music" style="display:none;">
@@ -306,7 +313,7 @@
                 <i data-feather="search"></i> Search
               </button>
             </div>
-            <!-- CHANGED: Inline Video Player (removed close button) -->
+            <!-- Inline Video Player -->
             <div id="ytInlinePlayer" style="display:none; margin-bottom:1rem;">
               <div style="position:relative; padding-bottom:56.25%; height:0; background:#000; border-radius:var(--card-radius); overflow:hidden;">
                 <iframe 
@@ -321,7 +328,8 @@
             <div id="ytResults" class="row g-2"></div>
           </div>
         </section>
-        <!-- CHANGED: Floating Video Window (simplified header) -->
+        
+        <!-- Floating Video Window -->
         <div id="floatingVideo" class="floating-mode" style="display:none;">
           <div class="fv-header">
             <div style="display:flex; align-items:center; gap:0.5rem;">
@@ -332,6 +340,9 @@
           </div>
           <div id="floatingVideoInner"></div>
         </div>
+      </section>
+    </main>
+  </div>
 
   <!-- ==========================
     Mobile Sidebar / Offcanvas (visible on mobile only)
@@ -364,19 +375,6 @@
 
   <!-- Mobile Overlay -->
   <div class="mobile-overlay" id="mobileOverlay"></div>
-
-  <!-- ==========================
-    FLOATING VIDEO OVERLAY (UI only, iframe stays in videoContainer)
-  ========================== -->
-  <div id="floatingVideo" style="display:none; position:fixed; bottom:20px; right:20px; width:320px; height:180px; z-index:10000; background:rgba(0,0,0,0.9); border-radius:10px; box-shadow:0 4px 12px rgba(0,0,0,0.5); flex-direction:column; pointer-events:none;">
-    <div class="fv-header" style="cursor:move; padding:6px 10px; background:rgba(0,0,0,0.95); color:#fff; display:flex; justify-content:space-between; align-items:center; border-top-left-radius:10px; border-top-right-radius:10px; pointer-events:auto;">
-      <span style="font-size:0.85rem; font-weight:600;">📹 Floating Meeting</span>
-      <div style="display:flex; gap:8px;">
-        <button id="expandFloating" title="Expand to Meetings" style="background:none; border:none; color:#fff; font-size:1rem; cursor:pointer; padding:0 4px;">🔼</button>
-        <button id="closeFloating" title="Close Meeting" style="background:none; border:none; color:#fff; font-size:1rem; cursor:pointer; padding:0 4px;">❌</button>
-      </div>
-    </div>
-  </div>
 
   <!-- Feather Icons Init -->
   <script>

@@ -1,3 +1,61 @@
+// Theme Management System
+(() => {
+  const THEME_KEY = 'studyhub_theme';
+  const themeToggle = document.getElementById('themeToggle');
+  const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
+
+  function applyTheme(theme, save = true) {
+    if (!theme) theme = 'light';
+    document.body.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', theme);
+    
+    if (themeToggle) {
+      themeToggle.setAttribute('aria-pressed', theme === 'dark' ? 'true' : 'false');
+    }
+    
+    if (save) {
+      localStorage.setItem(THEME_KEY, theme);
+    }
+    
+    // Re-render feather icons after theme change
+    if (window.feather) {
+      setTimeout(() => feather.replace(), 50);
+    }
+  }
+
+  function loadInitialTheme() {
+    const saved = localStorage.getItem(THEME_KEY);
+    if (saved) {
+      return applyTheme(saved, false);
+    }
+    if (prefersDark && prefersDark.matches) {
+      return applyTheme('dark', false);
+    }
+    applyTheme('light', false);
+  }
+
+  // Watch OS preference changes
+  if (prefersDark && prefersDark.addEventListener) {
+    prefersDark.addEventListener('change', e => {
+      applyTheme(e.matches ? 'dark' : 'light');
+    });
+  }
+
+  // Toggle button click handler
+  if (themeToggle) {
+    themeToggle.addEventListener('click', () => {
+      const current = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
+      applyTheme(current === 'dark' ? 'light' : 'dark');
+    });
+  }
+
+  // Load theme on page load
+  loadInitialTheme();
+})();
+
+
+
+
 // StudyHub Dashboard JavaScript - Complete Implementation
 // Initialize Feather icons when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
