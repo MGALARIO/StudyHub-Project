@@ -965,7 +965,16 @@ window.addEventListener('load', () => {
 // ==========================
   // JITSI MEETING: dock/float + draggable/resizable (MOBILE-FRIENDLY)
   // ==========================
-  document.addEventListener('DOMContentLoaded', () => {
+// ==========================
+// COMPLETE QUICK MEET IMPLEMENTATION
+// ==========================
+
+document.addEventListener('DOMContentLoaded', () => {
+  // ========================================
+  // JITSI MEETING SYSTEM - Complete Implementation
+  // ========================================
+  
+  // Element References
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
   const floatBtn = document.getElementById('floatBtn');
@@ -975,175 +984,479 @@ window.addEventListener('load', () => {
   const floatingJitsi = document.getElementById('floatingJitsi');
   const floatingJitsiInner = document.getElementById('floatingJitsiInner');
   const closeJitsiBtn = document.getElementById('closeJitsiBtn');
+  const quickMeetBtn = document.getElementById('startMeetBtn'); // Quick Meet Button
 
+  // State Variables
   let jitsiIframe = null;
+  let meetingActive = false;
   let isFloating = false;
 
+  // ========================================
+  // UTILITY FUNCTIONS
+  // ========================================
+
+  /**
+   * Sanitize room name - removes unsafe characters
+   * @param {string} name - Raw room name input
+   * @returns {string} - Safe room name
+   */
   function sanitizeRoom(name) {
-    if (!name || !name.trim()) return 'StudyHubRoom';
-    return name.trim().replace(/[^A-Za-z0-9_-]/g, '_') || 'StudyHubRoom';
+    if (!name || !name.trim()) {
+      return 'StudyHubRoom'; // Default room name
+    }
+    // Remove all characters except letters, numbers, hyphens, underscores
+    const sanitized = name.trim().replace(/[^A-Za-z0-9_-]/g, '_');
+    return sanitized || 'StudyHubRoom';
   }
 
+  /**
+   * Create Jitsi Meet iframe element
+   * @param {string} room - Sanitized room name
+   * @returns {HTMLIFrameElement} - Configured iframe
+   */
   function createJitsiIframe(room) {
-    const f = document.createElement('iframe');
-    f.src = `https://meet.jit.si/${encodeURIComponent(room)}`;
-    f.allow = 'camera; microphone; fullscreen; display-capture; autoplay';
-    f.style.width = '100%';
-    f.style.height = '100%';
-    f.style.border = '0';
-    f.loading = 'lazy';
-    return f;
+    const iframe = document.createElement('iframe');
+    iframe.src = `https://meet.jit.si/${encodeURIComponent(room)}`;
+    iframe.allow = 'camera; microphone; fullscreen; display-capture; autoplay';
+    iframe.style.width = '100%';
+    iframe.style.height = '100%';
+    iframe.style.border = '0';
+    iframe.loading = 'lazy';
+    return iframe;
   }
 
+  /**
+   * Get current active section name
+   * @returns {string} - Section name (dashboard, notes, meetings, etc.)
+   */
+  function getCurrentSection() {
+    const sections = document.querySelectorAll('[data-section-content]');
+    const activeSection = Array.from(sections).find(s => s.style.display !== 'none');
+    return activeSection ? activeSection.dataset.sectionContent : 'dashboard';
+  }
+
+  /**
+   * Navigate to specific section
+   * @param {string} name - Section name to show
+   */
+  function showSection(name) {
+    // Hide all sections
+    document.querySelectorAll('[data-section-content]').forEach(section => {
+      section.style.display = (section.dataset.sectionContent === name) ? '' : 'none';
+    });
+
+    // Update navigation active states (desktop)
+    document.querySelectorAll('.nav-link[data-section]').forEach(link => {
+      link.classList.toggle('active', link.dataset.section === name);
+    });
+
+    // Update navigation active states (mobile)
+    document.querySelectorAll('#mobileSidebar [data-section]').forEach(link => {
+      link.classList.toggle('active', link.dataset.section === name);
+    });
+
+    // Update page title and subtitle
+    const titles = {
+      dashboard: { title: 'Dashboard', subtitle: 'Overview — quick glance' },
+      notes: { title: 'Notes & Tasks', subtitle: 'Manage tasks and set repeating alarms' },
+      meetings: { title: 'Meetings', subtitle: 'Start or join study calls' },
+      music: { title: 'Live Radio', subtitle: 'Play, Listen, Relax and Enjoy!' },
+      youtube: { title: 'YouTube', subtitle: 'Search videos quickly' }
+    };
+
+    const sectionTitle = document.getElementById('sectionTitle');
+    const sectionSubtitle = document.getElementById('sectionSubtitle');
+    
+    if (titles[name]) {
+      if (sectionTitle) sectionTitle.textContent = titles[name].title;
+      if (sectionSubtitle) sectionSubtitle.textContent = titles[name].subtitle;
+    }
+
+    // Close mobile sidebar if open
+    const mobileSidebar = document.getElementById('mobileSidebar');
+    if (mobileSidebar && mobileSidebar.classList.contains('show')) {
+      const offcanvasInstance = bootstrap.Offcanvas.getInstance(mobileSidebar);
+      if (offcanvasInstance) offcanvasInstance.hide();
+    }
+
+    // Handle iframe placement for meetings section
+    handleIframePlacement(name);
+
+    // Auto-focus appropriate inputs
+    setTimeout(() => {
+      if (name === 'notes') {
+        document.getElementById('titleInput')?.focus();
+      } else if (name === 'meetings') {
+        document.getElementById('roomInput')?.focus();
+      } else if (name === 'youtube') {
+        document.getElementById('ytSearch')?.focus();
+      }
+    }, 200);
+
+    console.log(`✅ Navigated to: ${name}`);
+  }
+
+  /**
+   * Handle iframe placement based on active section
+   * @param {string} activeSectionName - Current section name
+   */
+  function handleIframePlacement(activeSectionName) {
+    if (!meetingActive || !jitsiIframe) return;
+
+    if (activeSectionName === 'meetings') {
+      // Dock: Place iframe in main video container
+      try {
+        if (jitsiIframe.parentNode) {
+          jitsiIframe.parentNode.removeChild(jitsiIframe);
+        }
+      } catch (e) {
+        console.warn('Failed to remove iframe from parent:', e);
+      }
+
+      videoContainer.innerHTML = '';
+      videoContainer.appendChild(jitsiIframe);
+      videoContainer.style.display = 'block';
+      
+      floatingJitsiInner.innerHTML = '';
+      floatingJitsi.style.display = 'none';
+      isFloating = false;
+      
+      if (floatBtn) floatBtn.textContent = '📌 Float';
+      
+      console.log('📍 Meeting docked to main container');
+    } else {
+      // Float: Place iframe in floating window when outside meetings section
+      try {
+        if (jitsiIframe.parentNode) {
+          jitsiIframe.parentNode.removeChild(jitsiIframe);
+        }
+      } catch (e) {
+        console.warn('Failed to remove iframe from parent:', e);
+      }
+
+      floatingJitsiInner.innerHTML = '';
+      floatingJitsiInner.appendChild(jitsiIframe);
+      floatingJitsi.style.display = 'flex';
+      
+      videoContainer.innerHTML = '';
+      videoContainer.style.display = 'none';
+      isFloating = true;
+      
+      if (floatBtn) floatBtn.textContent = '📍 Dock';
+      
+      console.log('🔳 Meeting moved to floating window');
+    }
+  }
+
+  // ========================================
+  // CORE MEETING FUNCTIONS
+  // ========================================
+
+  /**
+   * START MEETING - Main function to launch Jitsi Meet
+   */
   function startMeeting() {
-    if (jitsiIframe) return;
-    const room = sanitizeRoom(roomInput?.value || '');
-    jitsiIframe = createJitsiIframe(room);
+    // Prevent duplicate meetings
+    if (jitsiIframe) {
+      console.warn('⚠️ Meeting already active');
+      return;
+    }
+
+    if (!videoContainer) {
+      console.error('❌ Video container not found');
+      return;
+    }
+
+    // Get and sanitize room name
+    const roomName = roomInput?.value || '';
+    const sanitizedRoom = sanitizeRoom(roomName);
+    
+    console.log(`🚀 Starting meeting in room: ${sanitizedRoom}`);
+
+    // Create Jitsi iframe
+    jitsiIframe = createJitsiIframe(sanitizedRoom);
+
+    // Add to video container
     videoContainer.innerHTML = '';
     videoContainer.appendChild(jitsiIframe);
     videoContainer.style.display = 'block';
-    startBtn.disabled = true;
-    stopBtn.disabled = false;
-    floatBtn.disabled = false;
-    openBtn.onclick = () => window.open(jitsiIframe.src, '_blank', 'noopener');
-  }
 
-  function stopMeeting() {
-    if (jitsiIframe) {
-      try { jitsiIframe.src = 'about:blank'; } catch (e) {}
-      try { jitsiIframe.remove(); } catch (e) {}
-      jitsiIframe = null;
-    }
-    videoContainer.innerHTML = '';
-    videoContainer.style.display = 'none';
-    floatingJitsiInner.innerHTML = '';
-    floatingJitsi.style.display = 'none';
-    floatingJitsi.style.left = '';
-    floatingJitsi.style.top = '';
+    // Update state
+    meetingActive = true;
     isFloating = false;
-    startBtn.disabled = false;
-    stopBtn.disabled = true;
-    floatBtn.disabled = true;
-    floatBtn.textContent = '📌 Float';
-  }
 
-  function toggleFloat() {
-    if (!jitsiIframe) return;
-    if (!isFloating) {
-      floatingJitsiInner.appendChild(jitsiIframe);
-      floatingJitsi.style.display = 'flex';
-      videoContainer.style.display = 'none';
-      isFloating = true;
-      floatBtn.textContent = '📍 Dock';
-    } else {
-      videoContainer.appendChild(jitsiIframe);
-      floatingJitsi.style.display = 'none';
-      videoContainer.style.display = 'block';
-      isFloating = false;
+    // Update button states
+    if (startBtn) startBtn.disabled = true;
+    if (stopBtn) stopBtn.disabled = false;
+    if (floatBtn) {
+      floatBtn.disabled = false;
       floatBtn.textContent = '📌 Float';
     }
+
+    // Set up "Open in New Tab" functionality
+    if (openBtn) {
+      openBtn.onclick = () => {
+        if (jitsiIframe) {
+          window.open(jitsiIframe.src, '_blank', 'noopener,noreferrer');
+        }
+      };
+    }
+
+    // Handle iframe placement based on current section
+    handleIframePlacement(getCurrentSection());
+
+    console.log('✅ Meeting started successfully');
   }
 
-  // Close button handler - simple and direct
-  if (closeJitsiBtn) {
-    closeJitsiBtn.onclick = (ev) => {
-      ev.preventDefault();
-      ev.stopPropagation();
-      console.log('Jitsi close clicked');
-      stopMeeting();
-    };
-  }
+  /**
+   * STOP MEETING - Clean up and close meeting
+   */
+  function stopMeeting() {
+    console.log('🛑 Stopping meeting...');
 
-  // ENHANCED: Mobile-friendly drag and resize with touch support
-  (function initFloatingControls() {
-    const el = floatingJitsi;
-    const header = el.querySelector('.fw-header');
-    if (!el || !header) return;
-
-    // Touch/Pointer Drag Support
-    let dragging = false, startX = 0, startY = 0, startLeft = 0, startTop = 0;
-    
-    header.style.cursor = 'grab';
-    header.style.touchAction = 'none';
-    
-    function startDrag(e) {
-      // Don't start drag if clicking/touching close button
-      if (e.target.id === 'closeJitsiBtn' || e.target.closest('#closeJitsiBtn')) {
-        e.stopPropagation();
-        return;
+    // Clean up iframe
+    if (jitsiIframe) {
+      try {
+        jitsiIframe.src = 'about:blank'; // Stop loading content
+      } catch (e) {
+        console.warn('Failed to reset iframe src:', e);
       }
       
+      try {
+        jitsiIframe.remove(); // Remove from DOM
+      } catch (e) {
+        console.warn('Failed to remove iframe:', e);
+      }
+      
+      jitsiIframe = null;
+    }
+
+    // Clear containers
+    if (videoContainer) {
+      videoContainer.innerHTML = '';
+      videoContainer.style.display = 'none';
+    }
+    
+    if (floatingJitsiInner) {
+      floatingJitsiInner.innerHTML = '';
+    }
+    
+    if (floatingJitsi) {
+      floatingJitsi.style.display = 'none';
+      floatingJitsi.style.left = '';
+      floatingJitsi.style.top = '';
+    }
+
+    // Update state
+    meetingActive = false;
+    isFloating = false;
+
+    // Update button states
+    if (startBtn) startBtn.disabled = false;
+    if (stopBtn) stopBtn.disabled = true;
+    if (floatBtn) {
+      floatBtn.disabled = true;
+      floatBtn.textContent = '📌 Float';
+    }
+
+    console.log('✅ Meeting stopped successfully');
+  }
+
+  /**
+   * TOGGLE FLOAT - Switch between docked and floating mode
+   */
+  function toggleFloat() {
+    if (!meetingActive || !jitsiIframe) {
+      console.warn('⚠️ No active meeting to float');
+      return;
+    }
+
+    if (!isFloating) {
+      // Float the meeting
+      console.log('🔳 Floating meeting window...');
+      
+      floatingJitsiInner.innerHTML = '';
+      floatingJitsiInner.appendChild(jitsiIframe);
+      floatingJitsi.style.display = 'flex';
+      
+      videoContainer.style.display = 'none';
+      
+      isFloating = true;
+      if (floatBtn) floatBtn.textContent = '📍 Dock';
+      
+      console.log('✅ Meeting now floating');
+    } else {
+      // Dock the meeting
+      console.log('📍 Docking meeting...');
+      
+      videoContainer.innerHTML = '';
+      videoContainer.appendChild(jitsiIframe);
+      videoContainer.style.display = 'block';
+      
+      floatingJitsiInner.innerHTML = '';
+      floatingJitsi.style.display = 'none';
+      
+      isFloating = false;
+      if (floatBtn) floatBtn.textContent = '📌 Float';
+      
+      console.log('✅ Meeting now docked');
+    }
+  }
+
+  // ========================================
+  // QUICK MEET FUNCTIONALITY - THE KEY FEATURE!
+  // ========================================
+
+  /**
+   * QUICK MEET - One-click meeting start
+   * This is the main function for the Quick Meet button
+   */
+  function quickMeet() {
+    console.log('⚡ Quick Meet activated!');
+    
+    // Step 1: Navigate to Meetings section
+    showSection('meetings');
+    
+    // Step 2: Start meeting after brief delay (allows section to render)
+    setTimeout(() => {
+      startMeeting();
+    }, 100);
+  }
+
+  // ========================================
+  // EVENT LISTENERS
+  // ========================================
+
+  // Quick Meet Button - THE STAR OF THE SHOW! ⭐
+  if (quickMeetBtn) {
+    quickMeetBtn.addEventListener('click', (e) => {
       e.preventDefault();
-      
-      dragging = true;
+      quickMeet();
+    });
+    console.log('✅ Quick Meet button initialized');
+  } else {
+    console.warn('⚠️ Quick Meet button not found in DOM');
+  }
+
+  // Regular Start Button
+  if (startBtn) {
+    startBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      startMeeting();
+    });
+  }
+
+  // Stop Button
+  if (stopBtn) {
+    stopBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      stopMeeting();
+    });
+  }
+
+  // Float/Dock Toggle Button
+  if (floatBtn) {
+    floatBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      toggleFloat();
+    });
+  }
+
+  // Close Floating Window Button
+  if (closeJitsiBtn) {
+    closeJitsiBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      stopMeeting();
+    });
+  }
+
+  // ========================================
+  // FLOATING WINDOW DRAG & RESIZE
+  // ========================================
+
+  (function initFloatingControls() {
+    if (!floatingJitsi) return;
+
+    const header = floatingJitsi.querySelector('.fw-header');
+    if (!header) return;
+
+    // Make header draggable
+    let isDragging = false;
+    let startX = 0, startY = 0, startLeft = 0, startTop = 0;
+
+    header.style.cursor = 'grab';
+    header.style.touchAction = 'none';
+
+    function startDrag(e) {
+      // Don't drag if clicking close button
+      if (e.target.id === 'closeJitsiBtn' || e.target.closest('#closeJitsiBtn')) {
+        return;
+      }
+
+      e.preventDefault();
+      isDragging = true;
       header.style.cursor = 'grabbing';
-      
-      const rect = el.getBoundingClientRect();
+
+      const rect = floatingJitsi.getBoundingClientRect();
       startLeft = rect.left;
       startTop = rect.top;
-      
-      // Support both touch and mouse
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
+
       startX = clientX;
       startY = clientY;
-      
-      // Capture pointer for mouse
+
       if (e.pointerId) {
         header.setPointerCapture(e.pointerId);
       }
     }
-    
+
     function doDrag(e) {
-      if (!dragging) return;
-      
-      // Get current position (touch or mouse)
+      if (!isDragging) return;
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - startX;
       const deltaY = clientY - startY;
-      
+
       const viewportWidth = window.innerWidth;
       const viewportHeight = window.innerHeight;
-      const rect = el.getBoundingClientRect();
-      
-      // Calculate new position with boundaries
+      const rect = floatingJitsi.getBoundingClientRect();
+
       let newLeft = Math.max(0, Math.min(startLeft + deltaX, viewportWidth - rect.width));
       let newTop = Math.max(0, Math.min(startTop + deltaY, viewportHeight - rect.height));
-      
-      el.style.left = newLeft + 'px';
-      el.style.top = newTop + 'px';
-      el.style.right = 'auto';
-      el.style.bottom = 'auto';
+
+      floatingJitsi.style.left = newLeft + 'px';
+      floatingJitsi.style.top = newTop + 'px';
+      floatingJitsi.style.right = 'auto';
+      floatingJitsi.style.bottom = 'auto';
     }
-    
+
     function endDrag() {
-      if (!dragging) return;
-      dragging = false;
+      if (!isDragging) return;
+      isDragging = false;
       header.style.cursor = 'grab';
     }
-    
-    // Add event listeners for both touch and mouse
+
+    // Mouse/Touch events for dragging
     header.addEventListener('pointerdown', startDrag);
     header.addEventListener('touchstart', startDrag, { passive: false });
-    
     window.addEventListener('pointermove', doDrag);
     window.addEventListener('touchmove', doDrag, { passive: false });
-    
     window.addEventListener('pointerup', endDrag);
     window.addEventListener('touchend', endDrag);
-    window.addEventListener('touchcancel', endDrag);
 
-    // ENHANCED: Mobile-friendly resize handle
-    let resizeHandle = el.querySelector('.jitsi-resize-handle');
+    // Resize handle
+    let resizeHandle = floatingJitsi.querySelector('.jitsi-resize-handle');
     if (!resizeHandle) {
       resizeHandle = document.createElement('div');
       resizeHandle.className = 'jitsi-resize-handle';
       Object.assign(resizeHandle.style, {
         position: 'absolute',
-        width: '32px',  // Larger for touch
+        width: '32px',
         height: '32px',
         right: '0',
         bottom: '0',
@@ -1159,80 +1472,81 @@ window.addEventListener('load', () => {
         touchAction: 'none'
       });
       resizeHandle.innerHTML = '⇲';
-      el.appendChild(resizeHandle);
+      floatingJitsi.appendChild(resizeHandle);
     }
-    
-    let resizing = false, resizeStartW = 0, resizeStartH = 0, resizeStartX = 0, resizeStartY = 0;
+
+    let isResizing = false;
+    let resizeStartW = 0, resizeStartH = 0, resizeStartX = 0, resizeStartY = 0;
     const aspectRatio = 16 / 9;
-    const minWidth = 200;
-    const minHeight = 150;
-    
+    const minWidth = 300;
+    const minHeight = 200;
+
     function startResize(e) {
       e.preventDefault();
       e.stopPropagation();
-      
-      resizing = true;
-      const rect = el.getBoundingClientRect();
+
+      isResizing = true;
+      const rect = floatingJitsi.getBoundingClientRect();
       resizeStartW = rect.width;
       resizeStartH = rect.height;
-      
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
+
       resizeStartX = clientX;
       resizeStartY = clientY;
-      
+
       if (e.pointerId) {
         resizeHandle.setPointerCapture(e.pointerId);
       }
     }
-    
+
     function doResize(e) {
-      if (!resizing) return;
-      
+      if (!isResizing) return;
+
       const clientX = e.touches ? e.touches[0].clientX : e.clientX;
       const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      
+
       const deltaX = clientX - resizeStartX;
       const deltaY = clientY - resizeStartY;
-      
-      // Use the larger delta to maintain aspect ratio
+
       const delta = Math.max(deltaX, deltaY);
-      
+
       let newWidth = Math.max(minWidth, resizeStartW + delta);
       newWidth = Math.min(newWidth, window.innerWidth - 20);
-      
+
       let newHeight = newWidth / aspectRatio;
       newHeight = Math.max(minHeight, newHeight);
-      
-      el.style.width = newWidth + 'px';
-      el.style.height = newHeight + 'px';
+
+      floatingJitsi.style.width = newWidth + 'px';
+      floatingJitsi.style.height = newHeight + 'px';
     }
-    
+
     function endResize() {
-      resizing = false;
+      isResizing = false;
     }
-    
+
     resizeHandle.addEventListener('pointerdown', startResize);
     resizeHandle.addEventListener('touchstart', startResize, { passive: false });
-    
     window.addEventListener('pointermove', doResize);
     window.addEventListener('touchmove', doResize, { passive: false });
-    
     window.addEventListener('pointerup', endResize);
     window.addEventListener('touchend', endResize);
-    window.addEventListener('touchcancel', endResize);
-    
-    console.log('✅ Jitsi floating controls initialized (mobile-friendly)');
+
+    console.log('✅ Floating window controls initialized');
   })();
 
-  // Event listeners
-  startBtn?.addEventListener('click', startMeeting);
-  stopBtn?.addEventListener('click', stopMeeting);
-  floatBtn?.addEventListener('click', toggleFloat);
-  
-  // Make startMeeting globally accessible for Quick Meet
+  // ========================================
+  // EXPOSE PUBLIC API
+  // ========================================
+
   window.startMeeting = startMeeting;
+  window.stopMeeting = stopMeeting;
+  window.toggleFloat = toggleFloat;
+  window.quickMeet = quickMeet;
+  window.showSection = showSection;
+
+  console.log('✅ Quick Meet system fully initialized');
 });
 
 
