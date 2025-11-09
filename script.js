@@ -405,21 +405,30 @@ document.addEventListener('DOMContentLoaded', () => {
     updateAnnouncements();
   });
 
-  // Handle note actions (edit/delete/dismiss)
+// Handle note actions (edit/delete/dismiss)
   notesList?.addEventListener('click', e => {
     const editId = e.target.getAttribute('data-edit');
     const delId = e.target.getAttribute('data-del');
     const dismissId = e.target.getAttribute('data-dismiss');
     
     if (delId) {
-      // Delete note
-      stopAlarmForNote(delId); 
-      notes = notes.filter(n => String(n.id) !== String(delId)); 
-      saveNotes(); 
-      renderNotes(); 
-      updateAnnouncements();
-    } else if (editId) {
-      // Edit note - populate form
+      // Delete note with confirmation
+      const noteToDelete = notes.find(n => String(n.id) === String(delId));
+      const confirmMessage = noteToDelete 
+        ? `Are you sure you want to delete "${noteToDelete.title}"?` 
+        : 'Are you sure you want to delete this note?';
+      
+      if (confirm(confirmMessage)) {
+        stopAlarmForNote(delId); 
+        notes = notes.filter(n => String(n.id) !== String(delId)); 
+        saveNotes(); 
+        renderNotes(); 
+        updateAnnouncements();
+        console.log(`🗑️ Note deleted: ${delId}`);
+      } else {
+        console.log(`❌ Delete cancelled for: ${delId}`);
+      }
+    } else if (editId) {      // Edit note - populate form
       const n = notes.find(x => String(x.id) === String(editId)); 
       if (!n) return;
       titleInput.value = n.title; 
@@ -516,20 +525,30 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // Monitor for due tasks every second
+// Monitor for due tasks every second
   setInterval(() => {
     const now = new Date();
     notes.forEach(n => {
       if (!n.deadline || !n.alarmEnabled) return;
-      if (n.alarmAcknowledged || n.alarmActive) return;
+      if (n.alarmAcknowledged) return;
       
       const dl = new Date(n.deadline);
+      const diffMin = (now - dl) / 60000;
+      
       if (now >= dl) {
-        triggerAlarmForNote(n);
-        const diffMin = (now - dl) / 60000;
-        
-        // Add to missed history if overdue by more than 5 minutes
-        if (diffMin > 5) {
+        // If within 5 minutes, trigger alarm
+        if (diffMin <= 5) {
+          if (!n.alarmActive) {
+            triggerAlarmForNote(n);
+          }
+        } else {
+          // After 5 minutes, stop alarm and move to missed history
+          if (n.alarmActive) {
+            stopAlarmForNote(n.id);
+            console.log(`⏰ Alarm stopped after 5 minutes for: ${n.title}`);
+          }
+          
+          // Add to missed history if not already there
           if (!missedHistory.some(m => String(m.id) === String(n.id))) {
             missedHistory.unshift({ 
               id: n.id, 
@@ -539,6 +558,8 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             if (missedHistory.length > 200) missedHistory.pop();
             saveMissed();
+            renderMissedHistory();
+            console.log(`📋 Task moved to missed history: ${n.title}`);
           }
         }
       }
