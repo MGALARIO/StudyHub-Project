@@ -571,6 +571,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }, 1000);
+  
 
 // Enable audio autoplay after first user interaction (MOBILE-FRIENDLY)
   let audioUnlocked = false;
@@ -1011,9 +1012,7 @@ window.addEventListener('load', () => {
 
 
 // ==========================
-  // JITSI MEETING: dock/float + draggable/resizable (MOBILE-FRIENDLY)
-  // ==========================
-// ==========================
+// JITSI MEETING: dock/float + draggable/resizable (MOBILE-FRIENDLY)
 // COMPLETE QUICK MEET IMPLEMENTATION
 // ==========================
 
