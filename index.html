@@ -176,9 +176,19 @@
               </audio>
             </div>
             <div id="notesList" style="margin-top:1rem;"></div>
-            <div id="missedHistory" style="margin-top:1rem;"></div>
-            <button class="btn btn-sm btn-outline-danger" id="clearMissed">Clear Missed Tasks</button>
-          </div>
+
+            <!-- Missed History Section with proper heading -->
+            <div id="missedHistorySection" style="margin-top:2rem; display:none;">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <h4 class="section-title" style="margin-bottom:0;">
+                  <i data-feather="alert-triangle"></i> Missed Tasks History
+                </h4>
+                <button class="btn btn-sm btn-outline-danger" id="clearMissed">Clear History</button>
+              </div>
+              <div class="card-ui" style="background: rgba(255,107,95,0.05); border-left: 4px solid var(--accent);">
+                <div id="missedHistory"></div>
+              </div>
+            </div>
         </section>
 
         <!-- Meetings Section -->

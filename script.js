@@ -152,6 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => startMeeting(), 100);
   });
 
+  // View Notes Button - Navigate to Notes & Tasks section
+  document.getElementById('viewNotesBtn')?.addEventListener('click', e => { 
+    e.preventDefault(); 
+    showSection('notes');
+  });
+
   // --- NOTE FORM TOGGLE ---
   // Show/hide the note creation form
   const noteFormWrap = document.getElementById('noteFormWrap');
@@ -675,16 +681,37 @@ document.addEventListener('DOMContentLoaded', () => {
   // --- MISSED HISTORY MANAGEMENT ---
   const missedHistoryEl = document.getElementById('missedHistory');
   
-  function renderMissedHistory() {
-    if (!missedHistoryEl) return;
-    if (missedHistory.length === 0) {
-      missedHistoryEl.innerHTML = `<div class="small-muted">No missed tasks yet.</div>`;
-      return;
-    }
-    missedHistoryEl.innerHTML = missedHistory.map(m => 
-      `<div style="padding:.35rem 0;">❌ <strong>${escapeHtml(m.title)}</strong> — missed at ${new Date(m.missedAt).toLocaleString()}</div>`
-    ).join('');
+function renderMissedHistory() {
+  const missedHistorySection = document.getElementById('missedHistorySection');
+  if (!missedHistoryEl || !missedHistorySection) return;
+  
+  if (missedHistory.length === 0) {
+    // Hide entire section when empty
+    missedHistorySection.style.display = 'none';
+    missedHistoryEl.innerHTML = '';
+    return;
   }
+  
+  // Show section when there are missed tasks
+  missedHistorySection.style.display = 'block';
+  
+  missedHistoryEl.innerHTML = missedHistory.map(m => 
+    `<div>
+      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+        <span style="font-size:1.2rem;">❌</span>
+        <strong style="color:var(--text-primary);">${escapeHtml(m.title)}</strong>
+      </div>
+      <div class="small-muted" style="margin-left:1.7rem;">
+        Missed at: ${new Date(m.missedAt).toLocaleString()}
+      </div>
+    </div>`
+  ).join('');
+  
+  // Re-render feather icons
+  if (window.feather) {
+    setTimeout(() => feather.replace(), 50);
+  }
+}
   
   renderMissedHistory();
   
