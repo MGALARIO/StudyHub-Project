@@ -1002,7 +1002,7 @@ function initRadio() {
 
           if (response.ok) {
             const data = await response.json();
-            stations = data.filter(s => s.url_resolved || s.url).slice(0, 50);
+            stations = data.filter(s => s.url_resolved || s.url);
             showStatus(`✅ Loaded ${stations.length} stations from API`, 'success');
             showLoading(false);
             return;
