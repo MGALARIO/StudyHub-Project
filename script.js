@@ -1,11 +1,65 @@
-// Theme Management System
-(() => {
-  const THEME_KEY = 'studyhub_theme';
+// ============================================
+// STUDYHUB - COMPLETE FIXED JAVASCRIPT
+// Single file, cleaned and optimized
+// ============================================
+
+// ============================================
+// GLOBAL NAMESPACE - Single object to avoid pollution
+// ============================================
+const StudyHub = {
+  // App state
+  notes: [],
+  missedHistory: [],
+  activeAlarms: new Map(),
+  currentSection: 'dashboard',
+  meetingActive: false,
+  jitsiIframe: null,
+  isFloating: false,
+  audioUnlocked: false,
+  
+  // Configuration
+  config: {
+    OPENWEATHER_API: "2f916c415ef8bb8eb43cf1fe69a59d66", // TODO: Move to backend when learning backend
+    YOUTUBE_API: "AIzaSyCEhAQaMVE0_FF9voohcCOmN2xj0bTcF8I", // TODO: Move to backend when learning backend
+    STORAGE_KEYS: {
+      NOTES: 'studyhub_notes',
+      MISSED: 'studyhub_missed',
+      THEME: 'studyhub_theme'
+    }
+  }
+};
+
+// ============================================
+// UTILITY FUNCTIONS
+// ============================================
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+function debounce(func, wait) {
+  let timeout;
+  return function executedFunction(...args) {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func.apply(this, args), wait);
+  };
+}
+
+function sanitizeRoomName(name) {
+  if (!name || !name.trim()) return 'StudyHubRoom';
+  return name.trim().replace(/[^A-Za-z0-9_-]/g, '_') || 'StudyHubRoom';
+}
+
+// ============================================
+// THEME MANAGEMENT
+// ============================================
+function initTheme() {
   const themeToggle = document.getElementById('themeToggle');
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)');
 
   function applyTheme(theme, save = true) {
-    if (!theme) theme = 'light';
     document.body.setAttribute('data-theme', theme);
     document.documentElement.setAttribute('data-theme', theme);
     
@@ -14,34 +68,34 @@
     }
     
     if (save) {
-      localStorage.setItem(THEME_KEY, theme);
+      localStorage.setItem(StudyHub.config.STORAGE_KEYS.THEME, theme);
     }
     
-    // Re-render feather icons after theme change
     if (window.feather) {
       setTimeout(() => feather.replace(), 50);
     }
   }
 
   function loadInitialTheme() {
-    const saved = localStorage.getItem(THEME_KEY);
+    const saved = localStorage.getItem(StudyHub.config.STORAGE_KEYS.THEME);
     if (saved) {
-      return applyTheme(saved, false);
+      applyTheme(saved, false);
+    } else if (prefersDark && prefersDark.matches) {
+      applyTheme('dark', false);
+    } else {
+      applyTheme('light', false);
     }
-    if (prefersDark && prefersDark.matches) {
-      return applyTheme('dark', false);
-    }
-    applyTheme('light', false);
   }
 
-  // Watch OS preference changes
   if (prefersDark && prefersDark.addEventListener) {
     prefersDark.addEventListener('change', e => {
-      applyTheme(e.matches ? 'dark' : 'light');
+      const hasSaved = localStorage.getItem(StudyHub.config.STORAGE_KEYS.THEME);
+      if (!hasSaved) {
+        applyTheme(e.matches ? 'dark' : 'light', false);
+      }
     });
   }
 
-  // Toggle button click handler
   if (themeToggle) {
     themeToggle.addEventListener('click', () => {
       const current = document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light';
@@ -49,234 +103,287 @@
     });
   }
 
-  // Load theme on page load
   loadInitialTheme();
-})();
+}
 
-
-
-
-// StudyHub Dashboard JavaScript - Complete Implementation
-// Initialize Feather icons when DOM is ready
-document.addEventListener('DOMContentLoaded', () => {
-  try { 
-    if (window.feather) feather.replace(); 
-  } catch(e) { 
-    console.warn('Feather icons failed to load', e); 
-  }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-  // --- NAVIGATION SYSTEM ---
+// ============================================
+// NAVIGATION SYSTEM - Single implementation
+// ============================================
+function showSection(name) {
   const sections = document.querySelectorAll('[data-section-content]');
   const sectionTitle = document.getElementById('sectionTitle');
   const sectionSubtitle = document.getElementById('sectionSubtitle');
 
-  // Wire up navigation for both desktop sidebar and mobile menu
-  function wireNav() {
-    document.querySelectorAll('.nav-link[data-section]').forEach(a => {
-      a.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        showSection(a.dataset.section); 
-      });
-    });
-    // Mobile navigation links
-    document.querySelectorAll('.offcanvas [data-section]').forEach(a => {
-      a.addEventListener('click', (e) => { 
-        e.preventDefault(); 
-        showSection(a.dataset.section); 
-      });
-    });
-  }
-
-  // Show specific section and update UI accordingly
-  function showSection(name) {
-    // Show/hide content sections
-    sections.forEach(s => s.style.display = (s.dataset.sectionContent === name ? '' : 'none'));
-    
-    // Update active navigation states
-    document.querySelectorAll('.nav-link[data-section]').forEach(a => 
-      a.classList.toggle('active', a.dataset.section === name)
-    );
-    document.querySelectorAll('.offcanvas [data-section]').forEach(a => 
-      a.classList.toggle('active', a.dataset.section === name)
-    );
-    
-    // Update page titles
-    if (name === 'dashboard') { 
-      sectionTitle.textContent = 'Dashboard'; 
-      sectionSubtitle.textContent = 'Overview — quick glance'; 
-    }
-    if (name === 'notes') { 
-      sectionTitle.textContent = 'Notes & Tasks'; 
-      sectionSubtitle.textContent = 'Manage tasks and set repeating alarms'; 
-    }
-    if (name === 'meetings') { 
-      sectionTitle.textContent = 'Meetings'; 
-      sectionSubtitle.textContent = 'Start or join study calls'; 
-    }
-    if (name === 'music') { 
-      sectionTitle.textContent = 'Live Radio'; 
-      sectionSubtitle.textContent = 'Play, Listen, Relax and Enjoy!'; 
-    }
-    if (name === 'youtube') { 
-      sectionTitle.textContent = 'YouTube'; 
-      sectionSubtitle.textContent = 'Search videos quickly'; 
-    }
-    
-    // Handle iframe placement for meetings
-    handleIframePlacement(name);
-
-    // Close mobile menu if open
-    const mobileSidebar = document.getElementById('mobileSidebar');
-    if (mobileSidebar && mobileSidebar.classList.contains('show')) {
-      const offcanvasInstance = bootstrap.Offcanvas.getInstance(mobileSidebar);
-      if (offcanvasInstance) offcanvasInstance.hide();
-    }
-
-    // Auto-focus appropriate inputs
-    setTimeout(() => {
-      if (name === 'notes') document.getElementById('titleInput')?.focus();
-      if (name === 'meetings') document.getElementById('roomInput')?.focus();
-      if (name === 'youtube') document.getElementById('ytSearch')?.focus();
-    }, 200);
-  }
-
-  wireNav();
+  // Show/hide sections
+  sections.forEach(s => {
+    s.style.display = (s.dataset.sectionContent === name ? '' : 'none');
+  });
   
-  // --- QUICK ACTION BUTTONS ---
-  // These provide shortcuts to common actions
-  document.getElementById('startMeetBtn')?.addEventListener('click', e => { 
-    e.preventDefault(); 
-    showSection('meetings'); 
-    setTimeout(() => startMeeting(), 100);
+  // Update active states - desktop
+  document.querySelectorAll('.nav-link[data-section]').forEach(a => {
+    a.classList.toggle('active', a.dataset.section === name);
+  });
+  
+  // Update active states - mobile
+  document.querySelectorAll('#mobileSidebar [data-section]').forEach(a => {
+    a.classList.toggle('active', a.dataset.section === name);
+  });
+  
+  // Update titles
+  const titles = {
+    dashboard: { title: 'Dashboard', subtitle: 'Overview — quick glance' },
+    notes: { title: 'Notes & Tasks', subtitle: 'Manage tasks and set repeating alarms' },
+    meetings: { title: 'Meetings', subtitle: 'Start or join study calls' },
+    music: { title: 'Live Radio', subtitle: 'Play, Listen, Relax and Enjoy!' },
+    youtube: { title: 'YouTube', subtitle: 'Search videos quickly' }
+  };
+  
+  if (titles[name]) {
+    if (sectionTitle) sectionTitle.textContent = titles[name].title;
+    if (sectionSubtitle) sectionSubtitle.textContent = titles[name].subtitle;
+  }
+  
+  // Handle iframe placement for meetings
+  handleIframePlacement(name);
+
+  // Close mobile menu if open
+  const mobileSidebar = document.getElementById('mobileSidebar');
+  const mobileOverlay = document.getElementById('mobileOverlay');
+  if (mobileSidebar) mobileSidebar.classList.remove('active');
+  if (mobileOverlay) mobileOverlay.classList.remove('active');
+
+  // Auto-focus inputs
+  setTimeout(() => {
+    if (name === 'notes') document.getElementById('titleInput')?.focus();
+    if (name === 'meetings') document.getElementById('roomInput')?.focus();
+    if (name === 'youtube') document.getElementById('ytSearch')?.focus();
+  }, 200);
+  
+  StudyHub.currentSection = name;
+}
+
+function handleIframePlacement(activeSectionName) {
+  if (!StudyHub.meetingActive || !StudyHub.jitsiIframe) return;
+
+  const videoContainer = document.getElementById('videoContainer');
+  const floatingJitsi = document.getElementById('floatingJitsi');
+  const floatingJitsiInner = document.getElementById('floatingJitsiInner');
+  const floatBtn = document.getElementById('floatBtn');
+
+  if (activeSectionName === 'meetings') {
+    // Dock meeting
+    try {
+      if (StudyHub.jitsiIframe.parentNode) {
+        StudyHub.jitsiIframe.parentNode.removeChild(StudyHub.jitsiIframe);
+      }
+    } catch (e) {}
+
+    videoContainer.innerHTML = '';
+    videoContainer.appendChild(StudyHub.jitsiIframe);
+    videoContainer.style.display = 'block';
+    
+    floatingJitsiInner.innerHTML = '';
+    floatingJitsi.style.display = 'none';
+    StudyHub.isFloating = false;
+    
+    if (floatBtn) floatBtn.textContent = '📌 Float';
+  } else {
+    // Float meeting
+    try {
+      if (StudyHub.jitsiIframe.parentNode) {
+        StudyHub.jitsiIframe.parentNode.removeChild(StudyHub.jitsiIframe);
+      }
+    } catch (e) {}
+
+    floatingJitsiInner.innerHTML = '';
+    floatingJitsiInner.appendChild(StudyHub.jitsiIframe);
+    floatingJitsi.style.display = 'flex';
+    
+    videoContainer.innerHTML = '';
+    videoContainer.style.display = 'none';
+    StudyHub.isFloating = true;
+    
+    if (floatBtn) floatBtn.textContent = '📍 Dock';
+  }
+}
+
+function initNavigation() {
+  // Desktop navigation
+  document.querySelectorAll('.nav-link[data-section]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSection(link.dataset.section);
+    });
+  });
+  
+  // Mobile navigation
+  document.querySelectorAll('#mobileSidebar [data-section]').forEach(link => {
+    link.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSection(link.dataset.section);
+    });
+  });
+  
+  // Quick Meet button
+  const quickMeetBtn = document.getElementById('startMeetBtn');
+  if (quickMeetBtn) {
+    quickMeetBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSection('meetings');
+      setTimeout(() => startMeeting(), 100);
+    });
+  }
+  
+  // View Notes button
+  const viewNotesBtn = document.getElementById('viewNotesBtn');
+  if (viewNotesBtn) {
+    viewNotesBtn.addEventListener('click', (e) => {
+      e.preventDefault();
+      showSection('notes');
+    });
+  }
+}
+
+// ============================================
+// MOBILE MENU
+// ============================================
+function initMobileMenu() {
+  const mobileSidebar = document.getElementById('mobileSidebar');
+  const mobileOverlay = document.getElementById('mobileOverlay');
+  const mobileMenuBtn = document.getElementById('mobileMenuBtn');
+
+  if (!mobileSidebar || !mobileOverlay || !mobileMenuBtn) return;
+
+  mobileMenuBtn.addEventListener('click', () => {
+    mobileSidebar.classList.add('active');
+    mobileOverlay.classList.add('active');
   });
 
-  // View Notes Button - Navigate to Notes & Tasks section
-  document.getElementById('viewNotesBtn')?.addEventListener('click', e => { 
-    e.preventDefault(); 
-    showSection('notes');
+  mobileOverlay.addEventListener('click', () => {
+    mobileSidebar.classList.remove('active');
+    mobileOverlay.classList.remove('active');
   });
 
-  // --- NOTE FORM TOGGLE ---
-  // Show/hide the note creation form
-  const noteFormWrap = document.getElementById('noteFormWrap');
-  const toggleNoteFormBtn = document.getElementById('toggleNoteFormBtn');
-  
-  function toggleNoteForm(show) {
-    if (!noteFormWrap) return;
-    if (show === undefined) {
-      show = noteFormWrap.style.display === 'none';
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && mobileSidebar.classList.contains('active')) {
+      mobileSidebar.classList.remove('active');
+      mobileOverlay.classList.remove('active');
     }
-    noteFormWrap.style.display = show ? '' : 'none';
-    if (show) document.getElementById('titleInput')?.focus();
-  }
-  
-  toggleNoteFormBtn?.addEventListener('click', () => toggleNoteForm());
+  });
+}
 
-  // --- CLOCK AND CALENDAR WIDGETS ---
-  // Real-time clock display
-  function updateClock() {
-    const now = new Date();
-    const clockEl = document.getElementById('clock');
-    const dateEl = document.getElementById('date');
-    if (clockEl) clockEl.textContent = now.toLocaleTimeString();
-    if (dateEl) dateEl.textContent = now.toLocaleDateString(undefined, {
-      weekday: "long", 
-      year: "numeric", 
-      month: "long", 
+// ============================================
+// CLOCK & CALENDAR WIDGETS
+// ============================================
+function updateClock() {
+  const now = new Date();
+  const clockEl = document.getElementById('clock');
+  const dateEl = document.getElementById('date');
+  
+  if (clockEl) clockEl.textContent = now.toLocaleTimeString();
+  if (dateEl) {
+    dateEl.textContent = now.toLocaleDateString(undefined, {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
       day: "numeric"
     });
   }
-  
-  updateClock();
-  setInterval(updateClock, 1000);
+}
 
-  // Mini calendar widget
-  function renderMiniCalendar() {
-    const today = new Date();
-    const month = today.getMonth();
-    const year = today.getFullYear();
-    const firstDay = new Date(year, month, 1).getDay();
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const monthName = today.toLocaleString(undefined, { month: 'long' });
-    
-    let html = `<div class="mb-2 text-center"><strong>${monthName} ${year}</strong></div>`;
-    html += `<table class="table table-sm"><thead><tr>`;
-    ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => html += `<th>${d}</th>`);
-    html += `</tr></thead><tbody><tr>`;
-    
-    // Empty cells for days before month starts
-    for (let i = 0; i < firstDay; i++) html += `<td></td>`;
-    
-    // Calendar days
-    for (let d = 1; d <= daysInMonth; d++) {
-      const isToday = d === today.getDate();
-      html += `<td class="${isToday ? 'today' : ''}">${d}</td>`;
-      if ((d + firstDay) % 7 === 0) html += `</tr><tr>`;
-    }
-    html += `</tr></tbody></table>`;
-    
-    const el = document.getElementById('miniCalendar');
-    if (el) el.innerHTML = html;
+function renderMiniCalendar() {
+  const calendarEl = document.getElementById('miniCalendar');
+  if (!calendarEl) return;
+
+  const today = new Date();
+  const month = today.getMonth();
+  const year = today.getFullYear();
+  const currentDate = today.getDate();
+  const firstDay = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const monthName = today.toLocaleString(undefined, { month: 'long' });
+  
+  let html = `<div class="mb-2 text-center"><strong>${monthName} ${year}</strong></div>`;
+  html += `<table class="table table-sm"><thead><tr>`;
+  ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].forEach(d => html += `<th>${d}</th>`);
+  html += `</tr></thead><tbody><tr>`;
+  
+  for (let i = 0; i < firstDay; i++) html += `<td></td>`;
+  
+  for (let d = 1; d <= daysInMonth; d++) {
+    const isToday = d === currentDate;
+    html += `<td class="${isToday ? 'today' : ''}">${d}</td>`;
+    if ((d + firstDay) % 7 === 0) html += `</tr><tr>`;
   }
   
-  renderMiniCalendar();
+  html += `</tr></tbody></table>`;
+  calendarEl.innerHTML = html;
+}
 
-  // --- WEATHER WIDGET ---
-  // Display current weather using OpenWeatherMap API
+// ============================================
+// WEATHER WIDGET
+// ============================================
+function initWeather() {
   const weatherBox = document.getElementById('weather');
-  const OPENWEATHER_API = "2f916c415ef8bb8eb43cf1fe69a59d66";
-  const fallbackCity = "London";
+  if (!weatherBox) return;
+
+  weatherBox.textContent = 'Loading weather...';
 
   function renderWeather(data) {
-    if (!weatherBox) return;
-    if (!data || !data.main) { 
-      weatherBox.textContent = "⚠️ Weather unavailable"; 
-      return; 
+    if (!data || !data.main) {
+      weatherBox.textContent = "⚠️ Weather unavailable";
+      return;
     }
+    
     const temp = Math.round(data.main.temp);
     const desc = data.weather[0].description;
     const city = data.name;
     const icon = data.weather[0].icon;
+    
     weatherBox.innerHTML = `
       <div style="display:flex;align-items:center;gap:12px;justify-content:center">
-        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${desc}" style="width:56px;height:56px">
+        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${escapeHtml(desc)}" style="width:56px;height:56px" loading="lazy">
         <div style="text-align:left;">
-          <div style="font-weight:700">${city}</div>
-          <div class="small-muted">${temp}°C — ${desc}</div>
+          <div style="font-weight:700">${escapeHtml(city)}</div>
+          <div class="small-muted">${temp}°C — ${escapeHtml(desc)}</div>
         </div>
       </div>
     `;
   }
 
   function getWeatherByCoords(lat, lon) {
-    fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API}&units=metric`)
+    fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${StudyHub.config.OPENWEATHER_API}&units=metric`)
       .then(r => r.json())
       .then(renderWeather)
-      .catch(() => weatherBox && (weatherBox.textContent = "⚠️ Weather unavailable"));
+      .catch(() => weatherBox.textContent = "⚠️ Weather unavailable");
   }
 
   function getWeatherByCity(city) {
-    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${OPENWEATHER_API}&units=metric`)
+    fetch(`https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${StudyHub.config.OPENWEATHER_API}&units=metric`)
       .then(r => r.json())
       .then(renderWeather)
-      .catch(() => weatherBox && (weatherBox.textContent = "⚠️ Weather unavailable"));
+      .catch(() => weatherBox.textContent = "⚠️ Weather unavailable");
   }
 
-  // Try to get location, fallback to default city
   if (navigator.geolocation) {
     navigator.geolocation.getCurrentPosition(
       pos => getWeatherByCoords(pos.coords.latitude, pos.coords.longitude),
-      () => getWeatherByCity(fallbackCity),
+      () => getWeatherByCity('London'),
       { timeout: 6000 }
     );
   } else {
-    getWeatherByCity(fallbackCity);
+    getWeatherByCity('London');
   }
+}
 
-  // --- NOTES AND TASK MANAGEMENT SYSTEM ---
-  // Core elements for note management
+// ============================================
+// NOTES & TASK MANAGEMENT
+// ============================================
+function initNotes() {
+  // Load data
+  StudyHub.notes = JSON.parse(localStorage.getItem(StudyHub.config.STORAGE_KEYS.NOTES) || '[]');
+  StudyHub.missedHistory = JSON.parse(localStorage.getItem(StudyHub.config.STORAGE_KEYS.MISSED) || '[]');
+  
   const noteForm = document.getElementById('noteForm');
   const titleInput = document.getElementById('titleInput');
   const contentInput = document.getElementById('contentInput');
@@ -284,29 +391,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const alarmToggle = document.getElementById('alarmToggle');
   const notesList = document.getElementById('notesList');
   const editingIdInput = document.getElementById('editingId');
+  const toggleFormBtn = document.getElementById('toggleNoteFormBtn');
+  const noteFormWrap = document.getElementById('noteFormWrap');
+  const clearMissedBtn = document.getElementById('clearMissed');
+  const announcements = document.getElementById('announcements');
 
-  // Data storage - using localStorage for persistence
-  let notes = JSON.parse(localStorage.getItem('studyhub_notes') || '[]');
-  let missedHistory = JSON.parse(localStorage.getItem('studyhub_missed') || '[]');
-  const activeAlarms = new Map();
-
-  // Utility functions
-  function saveNotes() { 
-    localStorage.setItem('studyhub_notes', JSON.stringify(notes)); 
-  }
-  
-  function saveMissed() { 
-    localStorage.setItem('studyhub_missed', JSON.stringify(missedHistory)); 
-  }
-  
-  function escapeHtml(s) { 
-    return (s || '').toString()
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;'); 
+  function saveNotes() {
+    localStorage.setItem(StudyHub.config.STORAGE_KEYS.NOTES, JSON.stringify(StudyHub.notes));
   }
 
-  // Determine task status based on deadline and current time
+  function saveMissed() {
+    localStorage.setItem(StudyHub.config.STORAGE_KEYS.MISSED, JSON.stringify(StudyHub.missedHistory));
+  }
+
   function getTaskStatus(note) {
     if (!note.deadline) return { key: 'upcoming', label: 'Upcoming' };
     const now = new Date();
@@ -318,19 +415,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return { key: 'missed', label: 'Missed' };
   }
 
-  // Render all notes in the notes list
   function renderNotes() {
     if (!notesList) return;
     notesList.innerHTML = '';
     
-    if (!notes.length) { 
-      notesList.innerHTML = `<div class="small-muted">No notes yet — create one from the form above.</div>`; 
-      renderMissedHistory(); 
-      return; 
+    if (!StudyHub.notes.length) {
+      notesList.innerHTML = `<div class="small-muted">No notes yet — create one from the form above.</div>`;
+      renderMissedHistory();
+      return;
     }
     
-    // Sort notes by deadline (soonest first)
-    const sorted = [...notes].sort((a, b) => {
+    const sorted = [...StudyHub.notes].sort((a, b) => {
       if (!a.deadline && !b.deadline) return 0;
       if (!a.deadline) return 1;
       if (!b.deadline) return -1;
@@ -348,16 +443,13 @@ document.addEventListener('DOMContentLoaded', () => {
       const alarmBadge = note.alarmEnabled ? 
         `<span class="badge bg-danger ms-2">Alarm</span>` : '';
       
-      let actionHtml = '';
-      if (note.alarmActive) {
-        actionHtml = `<button class="btn btn-sm btn-warning mb-1" data-dismiss="${note.id}">Dismiss</button>`;
-      } else {
-        actionHtml = `<button class="btn btn-sm btn-outline-primary mb-1" data-edit="${note.id}">Edit</button>`;
-      }
+      const actionHtml = note.alarmActive
+        ? `<button class="btn btn-sm btn-warning mb-1" data-dismiss="${note.id}">Dismiss</button>`
+        : `<button class="btn btn-sm btn-outline-primary mb-1" data-edit="${note.id}">Edit</button>`;
       
       card.innerHTML = `
         <div style="flex:1;min-width:0">
-          <div style="display:flex;align-items:center;gap:.6rem">
+          <div style="display:flex;align-items:center;gap:.6rem;flex-wrap:wrap">
             <div style="font-weight:700;word-break:break-word;">${escapeHtml(note.title)}</div>
             ${alarmBadge}
             <div class="ms-2 small-muted">(${status.label})</div>
@@ -372,656 +464,297 @@ document.addEventListener('DOMContentLoaded', () => {
       `;
       notesList.appendChild(card);
     });
+    
     renderMissedHistory();
   }
 
-  // Handle note form submission (create/edit)
-  noteForm?.addEventListener('submit', e => {
-    e.preventDefault();
-    const title = titleInput.value.trim();
-    if (!title) return alert('Please enter a title.');
+  function renderMissedHistory() {
+    const missedHistoryEl = document.getElementById('missedHistory');
+    const missedSection = document.getElementById('missedHistorySection');
     
-    const content = contentInput.value.trim();
-    const deadline = deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null;
-    const alarmEnabled = !!alarmToggle.checked;
-    const editingId = editingIdInput.value;
+    if (!missedHistoryEl || !missedSection) return;
     
-    if (editingId) {
-      // Edit existing note
-      notes = notes.map(n => (String(n.id) === String(editingId) ? 
-        { ...n, title, content, deadline, alarmEnabled, alarmAcknowledged: false, alarmActive: false } : n));
-      editingIdInput.value = '';
-    } else {
-      // Create new note
-      notes.push({ 
-        id: Date.now(), 
-        title, 
-        content, 
-        deadline, 
-        alarmEnabled, 
-        alarmAcknowledged: false, 
-        alarmActive: false 
-      });
+    if (StudyHub.missedHistory.length === 0) {
+      missedSection.style.display = 'none';
+      missedHistoryEl.innerHTML = '';
+      return;
     }
     
-    saveNotes(); 
-    noteForm.reset(); 
-    toggleNoteForm(false); 
-    renderNotes(); 
-    updateAnnouncements();
-  });
-
-// Handle note actions (edit/delete/dismiss)
-  notesList?.addEventListener('click', e => {
-    const editId = e.target.getAttribute('data-edit');
-    const delId = e.target.getAttribute('data-del');
-    const dismissId = e.target.getAttribute('data-dismiss');
+    missedSection.style.display = 'block';
     
-    if (delId) {
-      // Delete note with confirmation
-      const noteToDelete = notes.find(n => String(n.id) === String(delId));
-      const confirmMessage = noteToDelete 
-        ? `Are you sure you want to delete "${noteToDelete.title}"?` 
-        : 'Are you sure you want to delete this note?';
-      
-      if (confirm(confirmMessage)) {
-        stopAlarmForNote(delId); 
-        notes = notes.filter(n => String(n.id) !== String(delId)); 
-        saveNotes(); 
-        renderNotes(); 
-        updateAnnouncements();
-        console.log(`🗑️ Note deleted: ${delId}`);
-      } else {
-        console.log(`❌ Delete cancelled for: ${delId}`);
-      }
-    } else if (editId) {      // Edit note - populate form
-      const n = notes.find(x => String(x.id) === String(editId)); 
-      if (!n) return;
-      titleInput.value = n.title; 
-      contentInput.value = n.content || ''; 
-      deadlineInput.value = n.deadline ? new Date(n.deadline).toISOString().slice(0, 16) : ''; 
-      alarmToggle.checked = !!n.alarmEnabled; 
-      editingIdInput.value = n.id;
-      stopAlarmForNote(n.id); 
-      n.alarmActive = false; 
-      saveNotes(); 
-      renderNotes();
-      toggleNoteForm(true);
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    } else if (dismissId) {
-      // Dismiss alarm
-      acknowledgeAlarm(dismissId);
-    }
-  });
-
-  // --- ALARM SYSTEM ---
-  // Request notification permissions
-  function ensureNotificationPermission() { 
-    if (!("Notification" in window)) return Promise.resolve(false); 
-    if (Notification.permission === "granted") return Promise.resolve(true); 
-    if (Notification.permission === "denied") return Promise.resolve(false); 
-    return Notification.requestPermission().then(p => p === "granted"); 
+    missedHistoryEl.innerHTML = StudyHub.missedHistory.map(m => 
+      `<div>
+        <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
+          <span style="font-size:1.2rem;">❌</span>
+          <strong style="color:var(--text-primary);">${escapeHtml(m.title)}</strong>
+        </div>
+        <div class="small-muted" style="margin-left:1.7rem;">
+          Missed at: ${new Date(m.missedAt).toLocaleString()}
+        </div>
+      </div>`
+    ).join('');
+    
+    if (window.feather) setTimeout(() => feather.replace(), 50);
   }
 
-  // Trigger alarm for overdue task
+  function stopAlarmForNote(noteId) {
+    const entry = StudyHub.activeAlarms.get(String(noteId));
+    if (entry && entry.audioEl) {
+      try {
+        entry.audioEl.pause();
+        entry.audioEl.currentTime = 0;
+        if (entry.audioEl.parentNode) entry.audioEl.parentNode.removeChild(entry.audioEl);
+      } catch(e) {}
+    }
+    StudyHub.activeAlarms.delete(String(noteId));
+    
+    const n = StudyHub.notes.find(x => String(x.id) === String(noteId));
+    if (n) {
+      n.alarmActive = false;
+      saveNotes();
+      renderNotes();
+    }
+  }
+
+  function acknowledgeAlarm(noteId) {
+    stopAlarmForNote(noteId);
+    const n = StudyHub.notes.find(x => String(x.id) === String(noteId));
+    if (n) {
+      n.alarmAcknowledged = true;
+      n.alarmActive = false;
+      saveNotes();
+      renderNotes();
+      updateAnnouncements();
+    }
+  }
+
   function triggerAlarmForNote(note) {
     if (note.alarmAcknowledged) return;
-    note.alarmActive = true; 
-    saveNotes(); 
+    note.alarmActive = true;
+    saveNotes();
     renderNotes();
     
     // Play alarm sound
-    let entry = activeAlarms.get(String(note.id));
+    let entry = StudyHub.activeAlarms.get(String(note.id));
     if (!entry) {
       const audioEl = document.getElementById('alarmAudio')?.cloneNode(true);
       if (audioEl) {
-        audioEl.id = 'alarmAudio_' + note.id; 
+        audioEl.id = 'alarmAudio_' + note.id;
         audioEl.loop = true;
-        audioEl.play().catch(() => {}); 
+        audioEl.play().catch(() => {
+          if ('vibrate' in navigator) navigator.vibrate([200, 100, 200, 100, 200]);
+        });
         document.body.appendChild(audioEl);
-        activeAlarms.set(String(note.id), { audioEl });
+        StudyHub.activeAlarms.set(String(note.id), { audioEl });
       }
-    } else { 
-      try { entry.audioEl.play().catch(() => {}); } catch(e) {} 
     }
     
-    // Show browser notification
-    ensureNotificationPermission().then(granted => {
-      if (granted) {
-        try {
-          const notif = new Notification('StudyHub Reminder', { 
-            body: `${note.title} — ${note.deadline ? new Date(note.deadline).toLocaleString() : 'due now'}`, 
-            tag: 'studyhub-reminder-' + note.id, 
-            renotify: true 
-          });
-          notif.onclick = () => { 
-            window.focus(); 
-            notif.close(); 
-            showSection('notes'); 
-            const el = document.getElementById('task-' + note.id); 
-            if (el) el.scrollIntoView({ behavior: 'smooth' }); 
-          };
-        } catch(e) {}
+    // Show notification
+    if (Notification.permission === "granted") {
+      try {
+        const notif = new Notification('StudyHub Reminder', {
+          body: `${note.title} — ${note.deadline ? new Date(note.deadline).toLocaleString() : 'due now'}`,
+          tag: 'studyhub-reminder-' + note.id,
+          renotify: true
+        });
+        notif.onclick = () => {
+          window.focus();
+          notif.close();
+          showSection('notes');
+          setTimeout(() => {
+            const el = document.getElementById('task-' + note.id);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+          }, 300);
+        };
+      } catch(e) {}
+    }
+  }
+
+  function updateAnnouncements() {
+    if (!announcements) return;
+    const now = new Date();
+    const items = StudyHub.notes.filter(n => {
+      if (!n.deadline) return false;
+      return new Date(n.deadline) <= now;
+    });
+    
+    if (items.length === 0) {
+      announcements.innerHTML = `<div class="small-muted">No reminders yet — add tasks in Notes & Tasks.</div>`;
+    } else {
+      announcements.innerHTML = items.map(n => {
+        const status = getTaskStatus(n);
+        return `<div class="announcement mb-2" data-task="${n.id}">${escapeHtml(n.title)} — ${status.label}</div>`;
+      }).join('');
+    }
+  }
+
+  // Form submission
+  if (noteForm) {
+    noteForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const title = titleInput.value.trim();
+      if (!title) return alert('Please enter a title.');
+      
+      const content = contentInput.value.trim();
+      const deadline = deadlineInput.value ? new Date(deadlineInput.value).toISOString() : null;
+      const alarmEnabled = !!alarmToggle.checked;
+      const editingId = editingIdInput.value;
+      
+      if (editingId) {
+        StudyHub.notes = StudyHub.notes.map(n => (String(n.id) === String(editingId) ? 
+          { ...n, title, content, deadline, alarmEnabled, alarmAcknowledged: false, alarmActive: false } : n));
+        editingIdInput.value = '';
+      } else {
+        StudyHub.notes.push({
+          id: Date.now(),
+          title,
+          content,
+          deadline,
+          alarmEnabled,
+          alarmAcknowledged: false,
+          alarmActive: false
+        });
+      }
+      
+      saveNotes();
+      noteForm.reset();
+      if (noteFormWrap) noteFormWrap.style.display = 'none';
+      renderNotes();
+      updateAnnouncements();
+    });
+  }
+
+  // Toggle form
+  if (toggleFormBtn && noteFormWrap) {
+    toggleFormBtn.addEventListener('click', () => {
+      const show = noteFormWrap.style.display === 'none';
+      noteFormWrap.style.display = show ? '' : 'none';
+      if (show && titleInput) titleInput.focus();
+    });
+  }
+
+  // Note actions
+  if (notesList) {
+    notesList.addEventListener('click', (e) => {
+      const editId = e.target.getAttribute('data-edit');
+      const delId = e.target.getAttribute('data-del');
+      const dismissId = e.target.getAttribute('data-dismiss');
+      
+      if (delId) {
+        const note = StudyHub.notes.find(n => String(n.id) === String(delId));
+        if (confirm(`Delete "${note?.title || 'this note'}"?`)) {
+          stopAlarmForNote(delId);
+          StudyHub.notes = StudyHub.notes.filter(n => String(n.id) !== String(delId));
+          saveNotes();
+          renderNotes();
+          updateAnnouncements();
+        }
+      } else if (editId) {
+        const n = StudyHub.notes.find(x => String(x.id) === String(editId));
+        if (!n) return;
+        titleInput.value = n.title;
+        contentInput.value = n.content || '';
+        deadlineInput.value = n.deadline ? new Date(n.deadline).toISOString().slice(0, 16) : '';
+        alarmToggle.checked = !!n.alarmEnabled;
+        editingIdInput.value = n.id;
+        stopAlarmForNote(n.id);
+        n.alarmActive = false;
+        saveNotes();
+        renderNotes();
+        if (noteFormWrap) noteFormWrap.style.display = '';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      } else if (dismissId) {
+        acknowledgeAlarm(dismissId);
       }
     });
   }
 
-  // Stop alarm for specific note
-  function stopAlarmForNote(noteId) {
-    const entry = activeAlarms.get(String(noteId));
-    if (entry && entry.audioEl) { 
-      try { entry.audioEl.pause(); entry.audioEl.currentTime = 0; } catch(e) {} 
-      try { if (entry.audioEl.parentNode) entry.audioEl.parentNode.removeChild(entry.audioEl); } catch(e) {} 
-    }
-    activeAlarms.delete(String(noteId));
-    const n = notes.find(x => String(x.id) === String(noteId));
-    if (n) { n.alarmActive = false; saveNotes(); renderNotes(); }
+  // Clear missed
+  if (clearMissedBtn) {
+    clearMissedBtn.addEventListener('click', () => {
+      if (confirm('Clear missed task history?')) {
+        StudyHub.missedHistory = [];
+        saveMissed();
+        renderMissedHistory();
+      }
+    });
   }
 
-  // Acknowledge alarm (stop and mark as dismissed)
-  function acknowledgeAlarm(noteId) {
-    stopAlarmForNote(noteId);
-    const n = notes.find(x => String(x.id) === String(noteId));
-    if (n) { 
-      n.alarmAcknowledged = true; 
-      n.alarmActive = false; 
-      saveNotes(); 
-      renderNotes(); 
-      updateAnnouncements(); 
-    }
+  // Announcement clicks
+  if (announcements) {
+    announcements.addEventListener('click', (e) => {
+      const tid = e.target.getAttribute('data-task');
+      if (!tid) return;
+      showSection('notes');
+      setTimeout(() => {
+        const el = document.getElementById('task-' + tid);
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }, 300);
+    });
   }
 
-// Monitor for due tasks every second
+  // Monitor alarms
   setInterval(() => {
     const now = new Date();
-    notes.forEach(n => {
-      if (!n.deadline || !n.alarmEnabled) return;
-      if (n.alarmAcknowledged) return;
+    StudyHub.notes.forEach(n => {
+      if (!n.deadline || !n.alarmEnabled || n.alarmAcknowledged) return;
       
       const dl = new Date(n.deadline);
       const diffMin = (now - dl) / 60000;
       
       if (now >= dl) {
-        // If within 5 minutes, trigger alarm
         if (diffMin <= 5) {
-          if (!n.alarmActive) {
-            triggerAlarmForNote(n);
-          }
+          if (!n.alarmActive) triggerAlarmForNote(n);
         } else {
-          // After 5 minutes, stop alarm and move to missed history
-          if (n.alarmActive) {
-            stopAlarmForNote(n.id);
-            console.log(`⏰ Alarm stopped after 5 minutes for: ${n.title}`);
-          }
+          if (n.alarmActive) stopAlarmForNote(n.id);
           
-          // Add to missed history if not already there
-          if (!missedHistory.some(m => String(m.id) === String(n.id))) {
-            missedHistory.unshift({ 
-              id: n.id, 
-              title: n.title, 
-              deadline: n.deadline, 
-              missedAt: new Date().toISOString() 
+          if (!StudyHub.missedHistory.some(m => String(m.id) === String(n.id))) {
+            StudyHub.missedHistory.unshift({
+              id: n.id,
+              title: n.title,
+              deadline: n.deadline,
+              missedAt: new Date().toISOString()
             });
-            if (missedHistory.length > 200) missedHistory.pop();
+            if (StudyHub.missedHistory.length > 200) StudyHub.missedHistory.pop();
             saveMissed();
             renderMissedHistory();
-            console.log(`📋 Task moved to missed history: ${n.title}`);
           }
         }
       }
     });
   }, 1000);
-  
 
-// Enable audio autoplay after first user interaction (MOBILE-FRIENDLY)
-  let audioUnlocked = false;
-  
-  function unlockAudio() { 
-    if (audioUnlocked) return;
-    
-    const base = document.getElementById('alarmAudio'); 
-    if (base) { 
-      // Try to play and immediately pause to unlock audio context
-      base.play().then(() => {
-        base.pause();
-        base.currentTime = 0;
-        audioUnlocked = true;
-        console.log('✅ Audio unlocked for alarms');
-      }).catch(err => {
-        console.warn('⚠️ Audio unlock failed:', err);
-      }); 
+  // Unlock audio
+  function unlockAudio() {
+    if (StudyHub.audioUnlocked) return;
+    const audio = document.getElementById('alarmAudio');
+    if (audio) {
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        StudyHub.audioUnlocked = true;
+      }).catch(() => {});
     }
   }
-  
-  // Listen to multiple interaction events for better mobile support
   ['click', 'touchstart', 'touchend', 'keydown'].forEach(eventType => {
     document.addEventListener(eventType, unlockAudio, { once: true, passive: true });
   });
 
-  // Test Alarm Button (Mobile-friendly)
-  document.getElementById('testAlarmBtn')?.addEventListener('click', (e) => {
-    e.preventDefault();
-    const audio = document.getElementById('alarmAudio');
-    
-    if (!audio) {
-      alert('❌ Alarm audio not found');
-      return;
-    }
-    
-    // Force unlock audio first
-    unlockAudio();
-    
-    // Play test alarm after short delay
-    setTimeout(() => {
-      const playPromise = audio.play();
-      
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          console.log('✅ Test alarm playing');
-          alert('🔔 Alarm test successful! You should hear a beep sound.');
-          
-          // Stop after 2 seconds
-          setTimeout(() => {
-            audio.pause();
-            audio.currentTime = 0;
-          }, 2000);
-        }).catch(error => {
-          console.error('❌ Test alarm failed:', error);
-          
-          // Try vibration on mobile
-          if ('vibrate' in navigator) {
-            navigator.vibrate([200, 100, 200, 100, 200]);
-            alert('⚠️ Sound blocked by browser.\n📳 Using vibration instead.\n\nTip: Allow sound in browser settings.');
-          } else {
-            alert('⚠️ Alarm sound blocked by your browser.\n\nPlease:\n1. Check browser sound settings\n2. Make sure phone is not on silent\n3. Allow notifications for this site');
-          }
-        });
-      }
-    }, 100);
-  });
-  
-  // --- ANNOUNCEMENTS SYSTEM ---
-  // Update dashboard announcements with due/overdue tasks
-  const announcementsEl = document.getElementById('announcements');
-  
-  function updateAnnouncements() {
-    if (!announcementsEl) return;
-    const now = new Date();
-    const items = notes.filter(n => {
-      if (!n.deadline) return false;
-      const dl = new Date(n.deadline);
-      return dl <= now; // Only include due or overdue tasks
-    }).map(n => {
-      const status = getTaskStatus(n);
-      return { id: n.id, title: n.title, status: status.label };
-    });
-    
-    if (items.length === 0) {
-      announcementsEl.innerHTML = `<div class="small-muted">No reminders yet — add tasks in Notes & Tasks.</div>`;
-    } else {
-      announcementsEl.innerHTML = items.map(it => 
-        `<div class="announcement mb-2" data-task="${it.id}">${escapeHtml(it.title)} — ${escapeHtml(it.status)}</div>`
-      ).join('');
-    }
-  }
-  
-  // Click announcements to jump to specific task
-  announcementsEl?.addEventListener('click', (e) => {
-    const tid = e.target.getAttribute('data-task');
-    if (!tid) return;
-    showSection('notes');
-    setTimeout(() => { 
-      const el = document.getElementById('task-' + tid); 
-      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); 
-    }, 300);
-  });
-  
-  setInterval(updateAnnouncements, 15000); // Update every 15 seconds
+  // Initial render
+  renderNotes();
   updateAnnouncements();
-
-  // --- MISSED HISTORY MANAGEMENT ---
-  const missedHistoryEl = document.getElementById('missedHistory');
+  setInterval(updateAnnouncements, 15000);
   
-function renderMissedHistory() {
-  const missedHistorySection = document.getElementById('missedHistorySection');
-  if (!missedHistoryEl || !missedHistorySection) return;
-  
-  if (missedHistory.length === 0) {
-    // Hide entire section when empty
-    missedHistorySection.style.display = 'none';
-    missedHistoryEl.innerHTML = '';
-    return;
-  }
-  
-  // Show section when there are missed tasks
-  missedHistorySection.style.display = 'block';
-  
-  missedHistoryEl.innerHTML = missedHistory.map(m => 
-    `<div>
-      <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">
-        <span style="font-size:1.2rem;">❌</span>
-        <strong style="color:var(--text-primary);">${escapeHtml(m.title)}</strong>
-      </div>
-      <div class="small-muted" style="margin-left:1.7rem;">
-        Missed at: ${new Date(m.missedAt).toLocaleString()}
-      </div>
-    </div>`
-  ).join('');
-  
-  // Re-render feather icons
-  if (window.feather) {
-    setTimeout(() => feather.replace(), 50);
-  }
-}
-  
-  renderMissedHistory();
-  
-  document.getElementById('clearMissed')?.addEventListener('click', () => { 
-    if (confirm('Clear missed task history?')) { 
-      missedHistory = []; 
-      saveMissed(); 
-      renderMissedHistory(); 
-    } 
-  });
-
-});
-
-const mobileSidebar = document.getElementById('mobileSidebar');
-const mobileOverlay = document.getElementById('mobileOverlay');
-const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-
-// Open / Close sidebar
-mobileMenuBtn.addEventListener('click', () => {
-  mobileSidebar.classList.add('active');
-  mobileOverlay.classList.add('active');
-});
-
-// Close sidebar on overlay click
-mobileOverlay.addEventListener('click', () => {
-  mobileSidebar.classList.remove('active');
-  mobileOverlay.classList.remove('active');
-});
-
-// Optional: close sidebar on ESC key
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape') {
-    mobileSidebar.classList.remove('active');
-    mobileOverlay.classList.remove('active');
-  }
-});
-
-
-
-/* ================================
-   Radio Class Code
-   ================================ */
-class ModernRadio {
-  constructor() {
-    this.stations = [];
-    this.currentStationIndex = 0;
-    this.currentCountry = 'PH';
-    this.workingEndpoints = [];
-    this.isLoading = false;
-
-    // Radio Browser API endpoints
-    this.API_ENDPOINTS = [
-      'https://at1.api.radio-browser.info',
-      'https://de1.api.radio-browser.info',
-      'https://nl1.api.radio-browser.info',
-      'https://fr1.api.radio-browser.info'
-    ];
-
-    // Status icons
-    this.STATUS_ICONS = {
-      success: '\u2705',       
-      warning: '\u26A0\uFE0F', 
-      error: '\u274C'          
-    };
-
-    // Fallback stations if API fails
-    this.FALLBACK_STATIONS = {
-      PH: [
-        { name: "DZMM TeleRadyo", url: "http://sg-icecast-1.eradioportal.com:8060/dzmm_teleradyo", country: "Philippines", tags: "news, talk", codec: "MP3", bitrate: "128" },
-        { name: "Love Radio Manila", url: "http://sg-icecast-1.eradioportal.com:8060/love_radio_manila", country: "Philippines", tags: "pop, opm", codec: "MP3", bitrate: "128" },
-        { name: "Magic 89.9", url: "http://sg-icecast-1.eradioportal.com:8060/magic_899", country: "Philippines", tags: "pop, hits", codec: "MP3", bitrate: "128" },
-        { name: "DWRR 101.1", url: "http://sg-icecast-1.eradioportal.com:8060/dwrr_1011", country: "Philippines", tags: "pop, rock", codec: "MP3", bitrate: "128" },
-        { name: "DZBB Super Radyo", url: "http://sg-icecast-1.eradioportal.com:8060/dzbb_super_radyo", country: "Philippines", tags: "news, talk", codec: "MP3", bitrate: "128" }
-      ],
-      US: [
-        { name: "NPR News", url: "https://npr-ice.streamguys1.com/live.mp3", country: "United States", tags: "news, talk", codec: "MP3", bitrate: "128" },
-        { name: "KEXP 90.3", url: "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", country: "United States", tags: "alternative, indie", codec: "MP3", bitrate: "128" },
-        { name: "WNYC FM", url: "https://fm939.wnyc.org/wnycfm", country: "United States", tags: "public radio, news", codec: "MP3", bitrate: "128" }
-      ],
-      GB: [
-        { name: "BBC Radio 1", url: "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio1_mf_p", country: "United Kingdom", tags: "pop, hits", codec: "AAC", bitrate: "128" },
-        { name: "BBC Radio 2", url: "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio2_mf_p", country: "United Kingdom", tags: "pop, classic hits", codec: "AAC", bitrate: "128" }
-      ],
-      CA: [
-        { name: "CBC Radio One", url: "https://cbc_r1_tor.akacast.akamaistream.net/7/750/451661/v1/rc.akacast.akamaistream.net/cbc_r1_tor", country: "Canada", tags: "news, talk", codec: "MP3", bitrate: "128" }
-      ],
-      AU: [
-        { name: "ABC Classic", url: "https://live-radio01.mediahubaustralia.com/2CLW/mp3/", country: "Australia", tags: "classical", codec: "MP3", bitrate: "128" }
-      ]
-    };
-
-    this.init();
-  }
-
-  init() {
-    this.setupEventListeners();
-    this.loadStations();
-  }
-
-  setupEventListeners() {
-    // Country buttons
-    document.querySelectorAll('.country-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.country-btn').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        this.currentCountry = btn.dataset.country;
-        this.currentStationIndex = 0;
-        this.loadStations();
-      });
-    });
-
-    // Prev / Next
-    document.getElementById('prevBtn').addEventListener('click', () => this.previousStation());
-    document.getElementById('nextBtn').addEventListener('click', () => this.nextStation());
-
-    // Audio events
-    const audio = document.getElementById('mainAudio');
-    audio.addEventListener('play', () => this.onAudioPlay());
-    audio.addEventListener('pause', () => this.onAudioPause());
-    audio.addEventListener('ended', () => this.onAudioPause());
-    audio.addEventListener('error', () => this.onAudioError());
-  }
-
-  showLoading(show) {
-    this.isLoading = show;
-    document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
-    document.getElementById('prevBtn').disabled = show;
-    document.getElementById('nextBtn').disabled = show;
-  }
-
-  showStatus(message, type = 'success', duration = 3000) {
-    const statusElement = document.getElementById('statusMessage');
-    statusElement.className = `status-message status-${type}`;
-    statusElement.textContent = message;
-    statusElement.style.display = 'block';
-
-    setTimeout(() => {
-      statusElement.style.display = 'none';
-    }, duration);
-  }
-
-  async testEndpoints() {
-    this.workingEndpoints = [];
-
-    for (let endpoint of this.API_ENDPOINTS) {
-      try {
-        const response = await fetch(`${endpoint}/json/stats`, {
-          method: 'GET',
-          signal: AbortSignal.timeout(8000)
-        });
-
-        if (response.ok) {
-          this.workingEndpoints.push(endpoint);
-        }
-      } catch (error) {
-        console.warn(`Endpoint ${endpoint} failed`);
-      }
-    }
-
-    return this.workingEndpoints.length > 0;
-  }
-
-  async fetchStationsFromAPI() {
-    if (this.workingEndpoints.length === 0) {
-      const hasWorking = await this.testEndpoints();
-      if (!hasWorking) {
-        throw new Error('No working API endpoints');
-      }
-    }
-
-    for (let endpoint of this.workingEndpoints) {
-      try {
-        const response = await fetch(`${endpoint}/json/stations/bycountrycodeexact/${this.currentCountry}`, {
-          signal: AbortSignal.timeout(10000)
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return data.filter(station => station.url_resolved || station.url);
-        }
-      } catch (error) {
-        console.warn(`API fetch failed for ${endpoint}`);
-      }
-    }
-
-    throw new Error('All API requests failed');
-  }
-
-  async loadStations() {
-    this.showLoading(true);
-
-    try {
-      const apiStations = await this.fetchStationsFromAPI();
-      this.stations = apiStations.slice(0, 50);
-      const icon = this.STATUS_ICONS.success;
-      this.showStatus(`${icon} Loaded ${this.stations.length} stations from API`, 'success');
-    } catch (error) {
-      this.stations = this.FALLBACK_STATIONS[this.currentCountry] || [];
-      if (this.stations.length > 0) {
-        const icon = this.STATUS_ICONS.warning;
-        this.showStatus(`${icon} Using backup stations (${this.stations.length} available)`, 'warning');
-      } else {
-        const icon = this.STATUS_ICONS.error;
-        this.showStatus(`${icon} No stations available for this country`, 'error');
-      }
-    }
-
-    this.currentStationIndex = 0;
-    this.updateDisplay();
-    this.showLoading(false);
-  }
-
-  updateDisplay() {
-    if (this.stations.length === 0) {
-      document.getElementById('stationName').textContent = 'No stations available';
-      document.getElementById('stationInfo').textContent = 'Try selecting a different country';
-      document.getElementById('stationCounter').textContent = '';
-      // keep static SVG in HTML
-      return;
-    }
-
-    const station = this.stations[this.currentStationIndex];
-    const avatar = document.getElementById('stationAvatar');
-    const name = document.getElementById('stationName');
-    const info = document.getElementById('stationInfo');
-    const counter = document.getElementById('stationCounter');
-    const audio = document.getElementById('mainAudio');
-
-    name.textContent = station.name || 'Unknown Station';
-
-    const tags = station.tags || 'No genre info';
-    const bitrate = station.bitrate ? `${station.bitrate} kbps` : 'Unknown quality';
-    const codec = station.codec || 'Unknown format';
-    info.textContent = `${tags} • ${bitrate} • ${codec}`;
-    counter.textContent = `Station ${this.currentStationIndex + 1} of ${this.stations.length}`;
-
-    // Always keep same radio SVG icon
-    avatar.innerHTML = this.getStationIcon();
-
-    const streamUrl = station.url_resolved || station.url;
-    if (streamUrl) {
-      audio.src = streamUrl;
-      audio.load();
-    }
-
-    document.getElementById('prevBtn').disabled = this.currentStationIndex === 0;
-    document.getElementById('nextBtn').disabled = this.currentStationIndex === this.stations.length - 1;
-  }
-
-  // Always static SVG icon
-  getStationIcon() {
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
-           viewBox="0 0 24 24" fill="currentColor">
-        <path d="M20 7.24V6a2 2 0 0 0-2-2H6.76l9.72-3.24-.64 1.91L6 5.5V6a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8a.76.76 0 0 0-.76-.76zM8 14a2 2 0 1 1 4 0 2 2 0 0 1-4 0zm8-4h-4v-2h4z"/>
-      </svg>
-    `;
-  }
-
-  previousStation() {
-    if (this.currentStationIndex > 0 && !this.isLoading) {
-      this.currentStationIndex--;
-      this.updateDisplay();
-    }
-  }
-
-  nextStation() {
-    if (this.currentStationIndex < this.stations.length - 1 && !this.isLoading) {
-      this.currentStationIndex++;
-      this.updateDisplay();
-    }
-  }
-
-  onAudioPlay() {
-    document.getElementById('stationAvatar').classList.add('playing');
-    document.getElementById('equalizer').classList.add('active');
-  }
-
-  onAudioPause() {
-    document.getElementById('stationAvatar').classList.remove('playing');
-    document.getElementById('equalizer').classList.remove('active');
-  }
-
-  onAudioError() {
-    const icon = this.STATUS_ICONS.error;
-    this.showStatus(`${icon} Failed to play this station. Try the next one.`, 'error');
-    this.onAudioPause();
+  // Request notification permission
+  if ('Notification' in window && Notification.permission === 'default') {
+    Notification.requestPermission();
   }
 }
 
-// Initialize the radio app
-window.addEventListener('load', () => {
-  new ModernRadio();
-});
-
-
-
-
-// ==========================
-// JITSI MEETING: dock/float + draggable/resizable (MOBILE-FRIENDLY)
-// COMPLETE QUICK MEET IMPLEMENTATION
-// ==========================
-
-document.addEventListener('DOMContentLoaded', () => {
-  // ========================================
-  // JITSI MEETING SYSTEM - Complete Implementation
-  // ========================================
-  
-  // Element References
+// ============================================
+// MEETINGS (JITSI)
+// ============================================
+function initMeetings() {
   const startBtn = document.getElementById('startBtn');
   const stopBtn = document.getElementById('stopBtn');
   const floatBtn = document.getElementById('floatBtn');
@@ -1031,208 +764,28 @@ document.addEventListener('DOMContentLoaded', () => {
   const floatingJitsi = document.getElementById('floatingJitsi');
   const floatingJitsiInner = document.getElementById('floatingJitsiInner');
   const closeJitsiBtn = document.getElementById('closeJitsiBtn');
-  const quickMeetBtn = document.getElementById('startMeetBtn'); // Quick Meet Button
 
-  // State Variables
-  let jitsiIframe = null;
-  let meetingActive = false;
-  let isFloating = false;
-
-  // ========================================
-  // UTILITY FUNCTIONS
-  // ========================================
-
-  /**
-   * Sanitize room name - removes unsafe characters
-   * @param {string} name - Raw room name input
-   * @returns {string} - Safe room name
-   */
-  function sanitizeRoom(name) {
-    if (!name || !name.trim()) {
-      return 'StudyHubRoom'; // Default room name
-    }
-    // Remove all characters except letters, numbers, hyphens, underscores
-    const sanitized = name.trim().replace(/[^A-Za-z0-9_-]/g, '_');
-    return sanitized || 'StudyHubRoom';
-  }
-
-  /**
-   * Create Jitsi Meet iframe element
-   * @param {string} room - Sanitized room name
-   * @returns {HTMLIFrameElement} - Configured iframe
-   */
-  function createJitsiIframe(room) {
-    const iframe = document.createElement('iframe');
-    iframe.src = `https://meet.jit.si/${encodeURIComponent(room)}`;
-    iframe.allow = 'camera; microphone; fullscreen; display-capture; autoplay';
-    iframe.style.width = '100%';
-    iframe.style.height = '100%';
-    iframe.style.border = '0';
-    iframe.loading = 'lazy';
-    return iframe;
-  }
-
-  /**
-   * Get current active section name
-   * @returns {string} - Section name (dashboard, notes, meetings, etc.)
-   */
-  function getCurrentSection() {
-    const sections = document.querySelectorAll('[data-section-content]');
-    const activeSection = Array.from(sections).find(s => s.style.display !== 'none');
-    return activeSection ? activeSection.dataset.sectionContent : 'dashboard';
-  }
-
-  /**
-   * Navigate to specific section
-   * @param {string} name - Section name to show
-   */
-  function showSection(name) {
-    // Hide all sections
-    document.querySelectorAll('[data-section-content]').forEach(section => {
-      section.style.display = (section.dataset.sectionContent === name) ? '' : 'none';
-    });
-
-    // Update navigation active states (desktop)
-    document.querySelectorAll('.nav-link[data-section]').forEach(link => {
-      link.classList.toggle('active', link.dataset.section === name);
-    });
-
-    // Update navigation active states (mobile)
-    document.querySelectorAll('#mobileSidebar [data-section]').forEach(link => {
-      link.classList.toggle('active', link.dataset.section === name);
-    });
-
-    // Update page title and subtitle
-    const titles = {
-      dashboard: { title: 'Dashboard', subtitle: 'Overview — quick glance' },
-      notes: { title: 'Notes & Tasks', subtitle: 'Manage tasks and set repeating alarms' },
-      meetings: { title: 'Meetings', subtitle: 'Start or join study calls' },
-      music: { title: 'Live Radio', subtitle: 'Play, Listen, Relax and Enjoy!' },
-      youtube: { title: 'YouTube', subtitle: 'Search videos quickly' }
-    };
-
-    const sectionTitle = document.getElementById('sectionTitle');
-    const sectionSubtitle = document.getElementById('sectionSubtitle');
-    
-    if (titles[name]) {
-      if (sectionTitle) sectionTitle.textContent = titles[name].title;
-      if (sectionSubtitle) sectionSubtitle.textContent = titles[name].subtitle;
-    }
-
-    // Close mobile sidebar if open
-    const mobileSidebar = document.getElementById('mobileSidebar');
-    if (mobileSidebar && mobileSidebar.classList.contains('show')) {
-      const offcanvasInstance = bootstrap.Offcanvas.getInstance(mobileSidebar);
-      if (offcanvasInstance) offcanvasInstance.hide();
-    }
-
-    // Handle iframe placement for meetings section
-    handleIframePlacement(name);
-
-    // Auto-focus appropriate inputs
-    setTimeout(() => {
-      if (name === 'notes') {
-        document.getElementById('titleInput')?.focus();
-      } else if (name === 'meetings') {
-        document.getElementById('roomInput')?.focus();
-      } else if (name === 'youtube') {
-        document.getElementById('ytSearch')?.focus();
-      }
-    }, 200);
-
-    console.log(`✅ Navigated to: ${name}`);
-  }
-
-  /**
-   * Handle iframe placement based on active section
-   * @param {string} activeSectionName - Current section name
-   */
-  function handleIframePlacement(activeSectionName) {
-    if (!meetingActive || !jitsiIframe) return;
-
-    if (activeSectionName === 'meetings') {
-      // Dock: Place iframe in main video container
-      try {
-        if (jitsiIframe.parentNode) {
-          jitsiIframe.parentNode.removeChild(jitsiIframe);
-        }
-      } catch (e) {
-        console.warn('Failed to remove iframe from parent:', e);
-      }
-
-      videoContainer.innerHTML = '';
-      videoContainer.appendChild(jitsiIframe);
-      videoContainer.style.display = 'block';
-      
-      floatingJitsiInner.innerHTML = '';
-      floatingJitsi.style.display = 'none';
-      isFloating = false;
-      
-      if (floatBtn) floatBtn.textContent = '📌 Float';
-      
-      console.log('📍 Meeting docked to main container');
-    } else {
-      // Float: Place iframe in floating window when outside meetings section
-      try {
-        if (jitsiIframe.parentNode) {
-          jitsiIframe.parentNode.removeChild(jitsiIframe);
-        }
-      } catch (e) {
-        console.warn('Failed to remove iframe from parent:', e);
-      }
-
-      floatingJitsiInner.innerHTML = '';
-      floatingJitsiInner.appendChild(jitsiIframe);
-      floatingJitsi.style.display = 'flex';
-      
-      videoContainer.innerHTML = '';
-      videoContainer.style.display = 'none';
-      isFloating = true;
-      
-      if (floatBtn) floatBtn.textContent = '📍 Dock';
-      
-      console.log('🔳 Meeting moved to floating window');
-    }
-  }
-
-  // ========================================
-  // CORE MEETING FUNCTIONS
-  // ========================================
-
-  /**
-   * START MEETING - Main function to launch Jitsi Meet
-   */
   function startMeeting() {
-    // Prevent duplicate meetings
-    if (jitsiIframe) {
-      console.warn('⚠️ Meeting already active');
-      return;
-    }
+    if (StudyHub.jitsiIframe) return;
+    if (!videoContainer) return;
 
-    if (!videoContainer) {
-      console.error('❌ Video container not found');
-      return;
-    }
-
-    // Get and sanitize room name
     const roomName = roomInput?.value || '';
-    const sanitizedRoom = sanitizeRoom(roomName);
-    
-    console.log(`🚀 Starting meeting in room: ${sanitizedRoom}`);
+    const sanitizedRoom = sanitizeRoomName(roomName);
 
-    // Create Jitsi iframe
-    jitsiIframe = createJitsiIframe(sanitizedRoom);
+    StudyHub.jitsiIframe = document.createElement('iframe');
+    StudyHub.jitsiIframe.src = `https://meet.jit.si/${encodeURIComponent(sanitizedRoom)}`;
+    StudyHub.jitsiIframe.allow = 'camera; microphone; fullscreen; display-capture; autoplay';
+    StudyHub.jitsiIframe.style.width = '100%';
+    StudyHub.jitsiIframe.style.height = '100%';
+    StudyHub.jitsiIframe.style.border = '0';
 
-    // Add to video container
     videoContainer.innerHTML = '';
-    videoContainer.appendChild(jitsiIframe);
+    videoContainer.appendChild(StudyHub.jitsiIframe);
     videoContainer.style.display = 'block';
 
-    // Update state
-    meetingActive = true;
-    isFloating = false;
+    StudyHub.meetingActive = true;
+    StudyHub.isFloating = false;
 
-    // Update button states
     if (startBtn) startBtn.disabled = true;
     if (stopBtn) stopBtn.disabled = false;
     if (floatBtn) {
@@ -1240,679 +793,582 @@ document.addEventListener('DOMContentLoaded', () => {
       floatBtn.textContent = '📌 Float';
     }
 
-    // Set up "Open in New Tab" functionality
     if (openBtn) {
       openBtn.onclick = () => {
-        if (jitsiIframe) {
-          window.open(jitsiIframe.src, '_blank', 'noopener,noreferrer');
+        if (StudyHub.jitsiIframe) {
+          window.open(StudyHub.jitsiIframe.src, '_blank', 'noopener,noreferrer');
         }
       };
     }
 
-    // Handle iframe placement based on current section
-    handleIframePlacement(getCurrentSection());
-
-    console.log('✅ Meeting started successfully');
+    handleIframePlacement(StudyHub.currentSection);
   }
 
-  /**
-   * STOP MEETING - Clean up and close meeting
-   */
   function stopMeeting() {
-    console.log('🛑 Stopping meeting...');
-
-    // Clean up iframe
-    if (jitsiIframe) {
+    if (StudyHub.jitsiIframe) {
       try {
-        jitsiIframe.src = 'about:blank'; // Stop loading content
-      } catch (e) {
-        console.warn('Failed to reset iframe src:', e);
-      }
-      
-      try {
-        jitsiIframe.remove(); // Remove from DOM
-      } catch (e) {
-        console.warn('Failed to remove iframe:', e);
-      }
-      
-      jitsiIframe = null;
+        StudyHub.jitsiIframe.src = 'about:blank';
+        StudyHub.jitsiIframe.remove();
+      } catch (e) {}
+      StudyHub.jitsiIframe = null;
     }
 
-    // Clear containers
     if (videoContainer) {
       videoContainer.innerHTML = '';
       videoContainer.style.display = 'none';
     }
-    
-    if (floatingJitsiInner) {
-      floatingJitsiInner.innerHTML = '';
-    }
-    
+
+    if (floatingJitsiInner) floatingJitsiInner.innerHTML = '';
     if (floatingJitsi) {
       floatingJitsi.style.display = 'none';
       floatingJitsi.style.left = '';
       floatingJitsi.style.top = '';
     }
 
-    // Update state
-    meetingActive = false;
-    isFloating = false;
+    StudyHub.meetingActive = false;
+    StudyHub.isFloating = false;
 
-    // Update button states
     if (startBtn) startBtn.disabled = false;
     if (stopBtn) stopBtn.disabled = true;
     if (floatBtn) {
       floatBtn.disabled = true;
       floatBtn.textContent = '📌 Float';
     }
-
-    console.log('✅ Meeting stopped successfully');
   }
 
-  /**
-   * TOGGLE FLOAT - Switch between docked and floating mode
-   */
   function toggleFloat() {
-    if (!meetingActive || !jitsiIframe) {
-      console.warn('⚠️ No active meeting to float');
-      return;
-    }
+    if (!StudyHub.meetingActive || !StudyHub.jitsiIframe) return;
 
-    if (!isFloating) {
-      // Float the meeting
-      console.log('🔳 Floating meeting window...');
-      
+    if (!StudyHub.isFloating) {
       floatingJitsiInner.innerHTML = '';
-      floatingJitsiInner.appendChild(jitsiIframe);
+      floatingJitsiInner.appendChild(StudyHub.jitsiIframe);
       floatingJitsi.style.display = 'flex';
-      
       videoContainer.style.display = 'none';
-      
-      isFloating = true;
+      StudyHub.isFloating = true;
       if (floatBtn) floatBtn.textContent = '📍 Dock';
-      
-      console.log('✅ Meeting now floating');
     } else {
-      // Dock the meeting
-      console.log('📍 Docking meeting...');
-      
       videoContainer.innerHTML = '';
-      videoContainer.appendChild(jitsiIframe);
+      videoContainer.appendChild(StudyHub.jitsiIframe);
       videoContainer.style.display = 'block';
-      
       floatingJitsiInner.innerHTML = '';
       floatingJitsi.style.display = 'none';
-      
-      isFloating = false;
+      StudyHub.isFloating = false;
       if (floatBtn) floatBtn.textContent = '📌 Float';
-      
-      console.log('✅ Meeting now docked');
     }
   }
 
-  // ========================================
-  // QUICK MEET FUNCTIONALITY - THE KEY FEATURE!
-  // ========================================
+  if (startBtn) startBtn.addEventListener('click', (e) => { e.preventDefault(); startMeeting(); });
+  if (stopBtn) stopBtn.addEventListener('click', (e) => { e.preventDefault(); stopMeeting(); });
+  if (floatBtn) floatBtn.addEventListener('click', (e) => { e.preventDefault(); toggleFloat(); });
+  if (closeJitsiBtn) closeJitsiBtn.addEventListener('click', (e) => { e.preventDefault(); stopMeeting(); });
 
-  /**
-   * QUICK MEET - One-click meeting start
-   * This is the main function for the Quick Meet button
-   */
-  function quickMeet() {
-    console.log('⚡ Quick Meet activated!');
-    
-    // Step 1: Navigate to Meetings section
-    showSection('meetings');
-    
-    // Step 2: Start meeting after brief delay (allows section to render)
-    setTimeout(() => {
-      startMeeting();
-    }, 100);
-  }
-
-  // ========================================
-  // EVENT LISTENERS
-  // ========================================
-
-  // Quick Meet Button - THE STAR OF THE SHOW! ⭐
-  if (quickMeetBtn) {
-    quickMeetBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      quickMeet();
-    });
-    console.log('✅ Quick Meet button initialized');
-  } else {
-    console.warn('⚠️ Quick Meet button not found in DOM');
-  }
-
-  // Regular Start Button
-  if (startBtn) {
-    startBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      startMeeting();
-    });
-  }
-
-  // Stop Button
-  if (stopBtn) {
-    stopBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      stopMeeting();
-    });
-  }
-
-  // Float/Dock Toggle Button
-  if (floatBtn) {
-    floatBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      toggleFloat();
-    });
-  }
-
-  // Close Floating Window Button
-  if (closeJitsiBtn) {
-    closeJitsiBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      stopMeeting();
-    });
-  }
-
-  // ========================================
-  // FLOATING WINDOW DRAG & RESIZE
-  // ========================================
-
-  (function initFloatingControls() {
-    if (!floatingJitsi) return;
-
+  // Draggable floating window
+  if (floatingJitsi) {
     const header = floatingJitsi.querySelector('.fw-header');
-    if (!header) return;
+    if (header) {
+      let isDragging = false;
+      let startX = 0, startY = 0, startLeft = 0, startTop = 0;
 
-    // Make header draggable
-    let isDragging = false;
-    let startX = 0, startY = 0, startLeft = 0, startTop = 0;
-
-    header.style.cursor = 'grab';
-    header.style.touchAction = 'none';
-
-    function startDrag(e) {
-      // Don't drag if clicking close button
-      if (e.target.id === 'closeJitsiBtn' || e.target.closest('#closeJitsiBtn')) {
-        return;
-      }
-
-      e.preventDefault();
-      isDragging = true;
-      header.style.cursor = 'grabbing';
-
-      const rect = floatingJitsi.getBoundingClientRect();
-      startLeft = rect.left;
-      startTop = rect.top;
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      startX = clientX;
-      startY = clientY;
-
-      if (e.pointerId) {
-        header.setPointerCapture(e.pointerId);
-      }
-    }
-
-    function doDrag(e) {
-      if (!isDragging) return;
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      const deltaX = clientX - startX;
-      const deltaY = clientY - startY;
-
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const rect = floatingJitsi.getBoundingClientRect();
-
-      let newLeft = Math.max(0, Math.min(startLeft + deltaX, viewportWidth - rect.width));
-      let newTop = Math.max(0, Math.min(startTop + deltaY, viewportHeight - rect.height));
-
-      floatingJitsi.style.left = newLeft + 'px';
-      floatingJitsi.style.top = newTop + 'px';
-      floatingJitsi.style.right = 'auto';
-      floatingJitsi.style.bottom = 'auto';
-    }
-
-    function endDrag() {
-      if (!isDragging) return;
-      isDragging = false;
       header.style.cursor = 'grab';
-    }
+      header.style.touchAction = 'none';
 
-    // Mouse/Touch events for dragging
-    header.addEventListener('pointerdown', startDrag);
-    header.addEventListener('touchstart', startDrag, { passive: false });
-    window.addEventListener('pointermove', doDrag);
-    window.addEventListener('touchmove', doDrag, { passive: false });
-    window.addEventListener('pointerup', endDrag);
-    window.addEventListener('touchend', endDrag);
+      function startDrag(e) {
+        if (e.target.id === 'closeJitsiBtn' || e.target.closest('#closeJitsiBtn')) return;
+        e.preventDefault();
+        isDragging = true;
+        header.style.cursor = 'grabbing';
 
-    // Resize handle
-    let resizeHandle = floatingJitsi.querySelector('.jitsi-resize-handle');
-    if (!resizeHandle) {
-      resizeHandle = document.createElement('div');
-      resizeHandle.className = 'jitsi-resize-handle';
-      Object.assign(resizeHandle.style, {
-        position: 'absolute',
-        width: '32px',
-        height: '32px',
-        right: '0',
-        bottom: '0',
-        cursor: 'nwse-resize',
-        zIndex: '1100',
-        background: 'rgba(255,107,95,0.3)',
-        borderRadius: '0 0 10px 0',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '16px',
-        color: 'rgba(255,255,255,0.7)',
-        touchAction: 'none'
-      });
-      resizeHandle.innerHTML = '⇲';
-      floatingJitsi.appendChild(resizeHandle);
-    }
+        const rect = floatingJitsi.getBoundingClientRect();
+        startLeft = rect.left;
+        startTop = rect.top;
 
-    let isResizing = false;
-    let resizeStartW = 0, resizeStartH = 0, resizeStartX = 0, resizeStartY = 0;
-    const aspectRatio = 16 / 9;
-    const minWidth = 300;
-    const minHeight = 200;
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+        startX = clientX;
+        startY = clientY;
 
-    function startResize(e) {
-      e.preventDefault();
-      e.stopPropagation();
-
-      isResizing = true;
-      const rect = floatingJitsi.getBoundingClientRect();
-      resizeStartW = rect.width;
-      resizeStartH = rect.height;
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      resizeStartX = clientX;
-      resizeStartY = clientY;
-
-      if (e.pointerId) {
-        resizeHandle.setPointerCapture(e.pointerId);
+        if (e.pointerId) header.setPointerCapture(e.pointerId);
       }
+
+      function doDrag(e) {
+        if (!isDragging) return;
+
+        const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+        const deltaX = clientX - startX;
+        const deltaY = clientY - startY;
+
+        const viewportWidth = window.innerWidth;
+        const viewportHeight = window.innerHeight;
+        const rect = floatingJitsi.getBoundingClientRect();
+
+        let newLeft = Math.max(0, Math.min(startLeft + deltaX, viewportWidth - rect.width));
+        let newTop = Math.max(0, Math.min(startTop + deltaY, viewportHeight - rect.height));
+
+        floatingJitsi.style.left = newLeft + 'px';
+        floatingJitsi.style.top = newTop + 'px';
+        floatingJitsi.style.right = 'auto';
+        floatingJitsi.style.bottom = 'auto';
+      }
+
+      function endDrag() {
+        if (!isDragging) return;
+        isDragging = false;
+        header.style.cursor = 'grab';
+      }
+
+      header.addEventListener('pointerdown', startDrag);
+      header.addEventListener('touchstart', startDrag, { passive: false });
+      window.addEventListener('pointermove', doDrag);
+      window.addEventListener('touchmove', doDrag, { passive: false });
+      window.addEventListener('pointerup', endDrag);
+      window.addEventListener('touchend', endDrag);
     }
-
-    function doResize(e) {
-      if (!isResizing) return;
-
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-
-      const deltaX = clientX - resizeStartX;
-      const deltaY = clientY - resizeStartY;
-
-      const delta = Math.max(deltaX, deltaY);
-
-      let newWidth = Math.max(minWidth, resizeStartW + delta);
-      newWidth = Math.min(newWidth, window.innerWidth - 20);
-
-      let newHeight = newWidth / aspectRatio;
-      newHeight = Math.max(minHeight, newHeight);
-
-      floatingJitsi.style.width = newWidth + 'px';
-      floatingJitsi.style.height = newHeight + 'px';
-    }
-
-    function endResize() {
-      isResizing = false;
-    }
-
-    resizeHandle.addEventListener('pointerdown', startResize);
-    resizeHandle.addEventListener('touchstart', startResize, { passive: false });
-    window.addEventListener('pointermove', doResize);
-    window.addEventListener('touchmove', doResize, { passive: false });
-    window.addEventListener('pointerup', endResize);
-    window.addEventListener('touchend', endResize);
-
-    console.log('✅ Floating window controls initialized');
-  })();
-
-  // ========================================
-  // EXPOSE PUBLIC API
-  // ========================================
-
-  window.startMeeting = startMeeting;
-  window.stopMeeting = stopMeeting;
-  window.toggleFloat = toggleFloat;
-  window.quickMeet = quickMeet;
-  window.showSection = showSection;
-
-  console.log('✅ Quick Meet system fully initialized');
-});
-
-
-// =========================
-// YouTube Search Module
-// =========================
-
-const YT_KEY = "AIzaSyCEhAQaMVE0_FF9voohcCOmN2xj0bTcF8I";
-
-// Element references
-const ytBtn = document.getElementById('ytSearchBtn');
-const ytResults = document.getElementById('ytResults');
-const ytSearchInput = document.getElementById('ytSearch');
-const ytInlinePlayer = document.getElementById('ytInlinePlayer');
-const ytInlineIframe = document.getElementById('ytInlineIframe');
-const floatingVideo = document.getElementById('floatingVideo');
-const floatingVideoInner = document.getElementById('floatingVideoInner');
-const ytFloatClose = document.getElementById('ytFloatClose');
-
-// Escape HTML function
-function escapeHtml(text) {
-  if (!text) return '';
-  const div = document.createElement('div');
-  div.textContent = text;
-  return div.innerHTML;
-}
-
-// ADDED: Stop all players
-function stopAllPlayers() {
-  // Stop inline player
-  if (ytInlineIframe && ytInlinePlayer.style.display !== 'none') {
-    ytInlineIframe.src = '';
-    ytInlinePlayer.style.display = 'none';
-  }
-  
-  // Stop floating player
-  if (floatingVideoInner && floatingVideo.style.display !== 'none') {
-    floatingVideoInner.innerHTML = '';
-    floatingVideo.style.display = 'none';
   }
 }
 
-// Create YouTube card with proper button handlers
-function createYTCard(item) {
-  const id = item.id.videoId;
-  const title = item.snippet.title;
-  const channelTitle = item.snippet.channelTitle || 'Unknown Channel';
-  const thumb = item.snippet.thumbnails?.medium?.url || 
-                item.snippet.thumbnails?.default?.url || 
-                'https://via.placeholder.com/320x180?text=No+Thumbnail';
-  
-  const col = document.createElement('div');
-  col.className = 'col-md-3 col-sm-6 col-12';
-  
-  const card = document.createElement('div');
-  card.className = 'yt-card';
-  card.innerHTML = `
-    <div class="yt-thumb">
-      <img src="${thumb}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180?text=Error'">
-    </div>
-    <div class="yt-info">
-      <div class="yt-title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
-      <div class="yt-channel" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
-      <div class="yt-actions">
-        <button class="btn btn-sm btn-success" data-video="${id}" title="Play inline">
-          <i data-feather="play"></i> <span>Play</span>
-        </button>
-        <button class="btn btn-sm btn-outline-secondary" data-video-float="${id}" title="Open in floating player">
-          <i data-feather="maximize-2"></i> <span>Float</span>
-        </button>
-      </div>
-    </div>
-  `;
-  
-  col.appendChild(card);
-  
-  if (typeof feather !== 'undefined') {
-    setTimeout(() => feather.replace(), 10);
-  }
-  
-  return col;
-}
+// ============================================
+// RADIO PLAYER
+// ============================================
+function initRadio() {
+  let stations = [];
+  let currentStationIndex = 0;
+  let currentCountry = 'PH';
+  let isLoading = false;
 
-// Main search function
-async function searchYouTube() {
-  const query = ytSearchInput?.value?.trim();
-  
-  if (!query) {
-    alert('Please enter a search term to find YouTube videos.');
-    ytSearchInput?.focus();
-    return;
+  const API_ENDPOINTS = [
+    'https://at1.api.radio-browser.info',
+    'https://de1.api.radio-browser.info',
+    'https://nl1.api.radio-browser.info'
+  ];
+
+  const FALLBACK_STATIONS = {
+    PH: [
+      { name: "DZMM TeleRadyo", url: "http://sg-icecast-1.eradioportal.com:8060/dzmm_teleradyo", country: "Philippines", tags: "news, talk", codec: "MP3", bitrate: "128" },
+      { name: "Love Radio Manila", url: "http://sg-icecast-1.eradioportal.com:8060/love_radio_manila", country: "Philippines", tags: "pop, opm", codec: "MP3", bitrate: "128" },
+      { name: "Magic 89.9", url: "http://sg-icecast-1.eradioportal.com:8060/magic_899", country: "Philippines", tags: "pop, hits", codec: "MP3", bitrate: "128" }
+    ],
+    US: [
+      { name: "NPR News", url: "https://npr-ice.streamguys1.com/live.mp3", country: "United States", tags: "news, talk", codec: "MP3", bitrate: "128" },
+      { name: "KEXP 90.3", url: "https://kexp-mp3-128.streamguys1.com/kexp128.mp3", country: "United States", tags: "alternative, indie", codec: "MP3", bitrate: "128" }
+    ],
+    GB: [
+      { name: "BBC Radio 1", url: "http://bbcmedia.ic.llnwd.net/stream/bbcmedia_radio1_mf_p", country: "United Kingdom", tags: "pop, hits", codec: "AAC", bitrate: "128" }
+    ],
+    CA: [
+      { name: "CBC Radio One", url: "https://cbc_r1_tor.akacast.akamaistream.net/7/750/451661/v1/rc.akacast.akamaistream.net/cbc_r1_tor", country: "Canada", tags: "news, talk", codec: "MP3", bitrate: "128" }
+    ],
+    AU: [
+      { name: "ABC Classic", url: "https://live-radio01.mediahubaustralia.com/2CLW/mp3/", country: "Australia", tags: "classical", codec: "MP3", bitrate: "128" }
+    ]
+  };
+
+  const statusMessage = document.getElementById('statusMessage');
+  const stationName = document.getElementById('stationName');
+  const stationInfo = document.getElementById('stationInfo');
+  const stationCounter = document.getElementById('stationCounter');
+  const mainAudio = document.getElementById('mainAudio');
+  const stationAvatar = document.getElementById('stationAvatar');
+  const equalizer = document.getElementById('equalizer');
+  const loadingIndicator = document.getElementById('loadingIndicator');
+  const prevBtn = document.getElementById('prevBtn');
+  const nextBtn = document.getElementById('nextBtn');
+
+  function showStatus(message, type = 'success', duration = 3000) {
+    if (!statusMessage) return;
+    statusMessage.textContent = message;
+    statusMessage.className = `status-message status-${type}`;
+    statusMessage.style.display = 'block';
+    setTimeout(() => { statusMessage.style.display = 'none'; }, duration);
   }
-  
-  ytResults.innerHTML = `
-    <div class="col-12">
-      <div class="yt-loading">
-        <div class="spinner"></div>
-        <div class="small-muted">Searching YouTube for "${escapeHtml(query)}"...</div>
-      </div>
-    </div>
-  `;
-  
-  try {
-    const url = `https://www.googleapis.com/youtube/v3/search?` + 
-                `part=snippet&type=video&maxResults=12&` +
-                `q=${encodeURIComponent(query)}&key=${YT_KEY}`;
-    
-    console.log('🔍 YouTube Search:', query);
-    
-    const response = await fetch(url);
-    const data = await response.json();
-    
-    console.log('📦 API Response:', data);
-    
-    if (data.error) {
-      console.error('❌ YouTube API Error:', data.error);
-      
-      let errorMessage = data.error.message;
-      let errorDetails = '';
-      
-      if (data.error.code === 403) {
-        if (data.error.message.includes('quotaExceeded')) {
-          errorMessage = 'Daily API quota exceeded';
-          errorDetails = 'The YouTube API key has reached its daily limit. Try again tomorrow.';
-        } else if (data.error.message.includes('keyInvalid')) {
-          errorMessage = 'Invalid API key';
-          errorDetails = 'The YouTube API key is invalid or has been disabled.';
-        } else {
-          errorMessage = 'Access forbidden';
-          errorDetails = 'The API key may be restricted. Check Google Cloud Console.';
+
+  function showLoading(show) {
+    isLoading = show;
+    if (loadingIndicator) loadingIndicator.style.display = show ? 'block' : 'none';
+    if (prevBtn) prevBtn.disabled = show;
+    if (nextBtn) nextBtn.disabled = show;
+  }
+
+  async function fetchStations() {
+    showLoading(true);
+
+    try {
+      for (let endpoint of API_ENDPOINTS) {
+        try {
+          const response = await fetch(`${endpoint}/json/stations/bycountrycodeexact/${currentCountry}`, {
+            signal: AbortSignal.timeout(10000)
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            stations = data.filter(s => s.url_resolved || s.url).slice(0, 50);
+            showStatus(`✅ Loaded ${stations.length} stations from API`, 'success');
+            showLoading(false);
+            return;
+          }
+        } catch (e) {
+          console.warn(`Endpoint ${endpoint} failed`);
         }
       }
       
+      throw new Error('All API endpoints failed');
+    } catch (error) {
+      stations = FALLBACK_STATIONS[currentCountry] || [];
+      if (stations.length > 0) {
+        showStatus(`⚠️ Using backup stations (${stations.length} available)`, 'warning');
+      } else {
+        showStatus('❌ No stations available for this country', 'error');
+      }
+    }
+
+    showLoading(false);
+  }
+
+  function updateDisplay() {
+    if (stations.length === 0) {
+      if (stationName) stationName.textContent = 'No stations available';
+      if (stationInfo) stationInfo.textContent = 'Try selecting a different country';
+      if (stationCounter) stationCounter.textContent = '';
+      return;
+    }
+
+    const station = stations[currentStationIndex];
+    if (stationName) stationName.textContent = station.name || 'Unknown Station';
+
+    const tags = station.tags || 'No genre info';
+    const bitrate = station.bitrate ? `${station.bitrate} kbps` : 'Unknown quality';
+    const codec = station.codec || 'Unknown format';
+    if (stationInfo) stationInfo.textContent = `${tags} • ${bitrate} • ${codec}`;
+    if (stationCounter) stationCounter.textContent = `Station ${currentStationIndex + 1} of ${stations.length}`;
+
+    const streamUrl = station.url_resolved || station.url;
+    if (streamUrl && mainAudio) {
+      mainAudio.src = streamUrl;
+      mainAudio.load();
+    }
+
+    if (prevBtn) prevBtn.disabled = currentStationIndex === 0;
+    if (nextBtn) nextBtn.disabled = currentStationIndex === stations.length - 1;
+  }
+
+  function previousStation() {
+    if (currentStationIndex > 0 && !isLoading) {
+      currentStationIndex--;
+      updateDisplay();
+    }
+  }
+
+  function nextStation() {
+    if (currentStationIndex < stations.length - 1 && !isLoading) {
+      currentStationIndex++;
+      updateDisplay();
+    }
+  }
+
+  // Country buttons
+  document.querySelectorAll('.country-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.country-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentCountry = btn.dataset.country;
+      currentStationIndex = 0;
+      fetchStations().then(updateDisplay);
+    });
+  });
+
+  // Navigation
+  if (prevBtn) prevBtn.addEventListener('click', previousStation);
+  if (nextBtn) nextBtn.addEventListener('click', nextStation);
+
+  // Audio events
+  if (mainAudio) {
+    mainAudio.addEventListener('play', () => {
+      if (stationAvatar) stationAvatar.classList.add('playing');
+      if (equalizer) equalizer.classList.add('active');
+    });
+
+    mainAudio.addEventListener('pause', () => {
+      if (stationAvatar) stationAvatar.classList.remove('playing');
+      if (equalizer) equalizer.classList.remove('active');
+    });
+
+    mainAudio.addEventListener('ended', () => {
+      if (stationAvatar) stationAvatar.classList.remove('playing');
+      if (equalizer) equalizer.classList.remove('active');
+    });
+
+    mainAudio.addEventListener('error', () => {
+      showStatus('❌ Failed to play this station. Try the next one.', 'error');
+      if (stationAvatar) stationAvatar.classList.remove('playing');
+      if (equalizer) equalizer.classList.remove('active');
+    });
+  }
+
+  // Initial load
+  fetchStations().then(updateDisplay);
+}
+
+// ============================================
+// YOUTUBE SEARCH
+// ============================================
+function initYouTube() {
+  const ytBtn = document.getElementById('ytSearchBtn');
+  const ytResults = document.getElementById('ytResults');
+  const ytSearchInput = document.getElementById('ytSearch');
+  const ytInlinePlayer = document.getElementById('ytInlinePlayer');
+  const ytInlineIframe = document.getElementById('ytInlineIframe');
+  const floatingVideo = document.getElementById('floatingVideo');
+  const floatingVideoInner = document.getElementById('floatingVideoInner');
+  const ytFloatClose = document.getElementById('ytFloatClose');
+
+  function stopAllPlayers() {
+    if (ytInlineIframe && ytInlinePlayer.style.display !== 'none') {
+      ytInlineIframe.src = '';
+      ytInlinePlayer.style.display = 'none';
+    }
+    if (floatingVideoInner && floatingVideo.style.display !== 'none') {
+      floatingVideoInner.innerHTML = '';
+      floatingVideo.style.display = 'none';
+    }
+  }
+
+  function createYTCard(item) {
+    const id = item.id.videoId;
+    const title = item.snippet.title;
+    const channelTitle = item.snippet.channelTitle || 'Unknown Channel';
+    const thumb = item.snippet.thumbnails?.medium?.url || 
+                  item.snippet.thumbnails?.default?.url || 
+                  'https://via.placeholder.com/320x180?text=No+Thumbnail';
+    
+    const col = document.createElement('div');
+    col.className = 'col-md-3 col-sm-6 col-12';
+    
+    const card = document.createElement('div');
+    card.className = 'yt-card';
+    card.innerHTML = `
+      <div class="yt-thumb">
+        <img src="${thumb}" alt="${escapeHtml(title)}" loading="lazy" onerror="this.src='https://via.placeholder.com/320x180?text=Error'">
+      </div>
+      <div class="yt-info">
+        <div class="yt-title" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+        <div class="yt-channel" title="${escapeHtml(channelTitle)}">${escapeHtml(channelTitle)}</div>
+        <div class="yt-actions">
+          <button class="btn btn-sm btn-success" data-video="${id}" title="Play inline">
+            <i data-feather="play"></i> <span>Play</span>
+          </button>
+          <button class="btn btn-sm btn-outline-secondary" data-video-float="${id}" title="Open in floating player">
+            <i data-feather="maximize-2"></i> <span>Float</span>
+          </button>
+        </div>
+      </div>
+    `;
+    
+    col.appendChild(card);
+    if (window.feather) setTimeout(() => feather.replace(), 10);
+    return col;
+  }
+  async function searchYouTube() {
+    const query = ytSearchInput?.value?.trim();
+    
+    if (!query) {
+      alert('Please enter a search term to find YouTube videos.');
+      ytSearchInput?.focus();
+      return;
+    }
+    
+    ytResults.innerHTML = `
+      <div class="col-12">
+        <div class="yt-loading">
+          <div class="spinner"></div>
+          <div class="small-muted">Searching YouTube for "${escapeHtml(query)}"...</div>
+        </div>
+      </div>
+    `;
+    
+    try {
+      const url = `https://www.googleapis.com/youtube/v3/search?` + 
+                  `part=snippet&type=video&maxResults=12&` +
+                  `q=${encodeURIComponent(query)}&key=${StudyHub.config.YOUTUBE_API}`;
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (data.error) {
+        let errorMessage = data.error.message;
+        let errorDetails = '';
+        
+        if (data.error.code === 403) {
+          if (data.error.message.includes('quotaExceeded')) {
+            errorMessage = 'Daily API quota exceeded';
+            errorDetails = 'The YouTube API key has reached its daily limit. Try again tomorrow.';
+          } else if (data.error.message.includes('keyInvalid')) {
+            errorMessage = 'Invalid API key';
+            errorDetails = 'The YouTube API key is invalid or has been disabled.';
+          }
+        }
+        
+        ytResults.innerHTML = `
+          <div class="col-12">
+            <div class="card-ui error-state">
+              <div style="text-align:center; padding:2rem;">
+                <div style="font-size:3rem; margin-bottom:1rem;">⚠️</div>
+                <h5 style="color:var(--accent); margin-bottom:0.5rem;">${escapeHtml(errorMessage)}</h5>
+                <p class="small-muted" style="margin-bottom:1rem;">${escapeHtml(errorDetails)}</p>
+                <small class="text-muted">Error Code: ${data.error.code}</small>
+              </div>
+            </div>
+          </div>
+        `;
+        return;
+      }
+      
+      if (!data.items || data.items.length === 0) {
+        ytResults.innerHTML = `
+          <div class="col-12">
+            <div class="yt-empty-state">
+              <svg data-feather="search" style="width:64px;height:64px;opacity:0.3;margin-bottom:1rem;"></svg>
+              <h5>No results found</h5>
+              <p class="small-muted">No videos found for "${escapeHtml(query)}". Try different keywords.</p>
+            </div>
+          </div>
+        `;
+        if (window.feather) feather.replace();
+        return;
+      }
+      
+      ytResults.innerHTML = '';
+      data.items.forEach(item => {
+        ytResults.appendChild(createYTCard(item));
+      });
+      
+      // Play button events
+      ytResults.querySelectorAll('[data-video]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const videoId = e.currentTarget.getAttribute('data-video');
+          playInlineVideo(videoId);
+        });
+      });
+      
+      // Float button events
+      ytResults.querySelectorAll('[data-video-float]').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const videoId = e.currentTarget.getAttribute('data-video-float');
+          openFloatingVideo(videoId);
+        });
+      });
+      
+      if (window.feather) feather.replace();
+      
+    } catch (error) {
       ytResults.innerHTML = `
         <div class="col-12">
           <div class="card-ui error-state">
             <div style="text-align:center; padding:2rem;">
-              <div style="font-size:3rem; margin-bottom:1rem;">⚠️</div>
-              <h5 style="color:var(--accent); margin-bottom:0.5rem;">${escapeHtml(errorMessage)}</h5>
-              <p class="small-muted" style="margin-bottom:1rem;">${escapeHtml(errorDetails)}</p>
-              <small class="text-muted">Error Code: ${data.error.code}</small>
+              <div style="font-size:3rem; margin-bottom:1rem;">🔌</div>
+              <h5 style="color:var(--accent); margin-bottom:0.5rem;">Connection Error</h5>
+              <p class="small-muted" style="margin-bottom:1rem;">
+                Unable to connect to YouTube API. Check your internet connection.
+              </p>
+              <small class="text-muted">${escapeHtml(error.message)}</small>
             </div>
           </div>
         </div>
       `;
-      return;
+    }
+  }
+
+  function playInlineVideo(videoId) {
+    if (floatingVideo.style.display !== 'none') {
+      floatingVideoInner.innerHTML = '';
+      floatingVideo.style.display = 'none';
     }
     
-    if (!data.items || data.items.length === 0) {
-      ytResults.innerHTML = `
-        <div class="col-12">
-          <div class="yt-empty-state">
-            <svg data-feather="search" style="width:64px;height:64px;opacity:0.3;margin-bottom:1rem;"></svg>
-            <h5>No results found</h5>
-            <p class="small-muted">No videos found for "${escapeHtml(query)}". Try different keywords.</p>
-          </div>
-        </div>
-      `;
-      if (typeof feather !== 'undefined') feather.replace();
-      return;
+    ytInlineIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
+    ytInlinePlayer.style.display = 'block';
+    ytInlinePlayer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  }
+
+  function openFloatingVideo(videoId) {
+    if (!floatingVideo || !floatingVideoInner) return;
+    
+    if (ytInlinePlayer.style.display !== 'none') {
+      ytInlineIframe.src = '';
+      ytInlinePlayer.style.display = 'none';
     }
     
-    console.log(`✅ Found ${data.items.length} videos`);
-    ytResults.innerHTML = '';
-    
-    data.items.forEach(item => {
-      ytResults.appendChild(createYTCard(item));
-    });
-    
-    // CHANGED: Play button stops other player and shows inline
-    ytResults.querySelectorAll('[data-video]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const videoId = e.currentTarget.getAttribute('data-video');
-        console.log('▶️ Playing inline:', videoId);
-        playInlineVideo(videoId);
-      });
-    });
-    
-    // CHANGED: Float button stops other player and opens floating
-    ytResults.querySelectorAll('[data-video-float]').forEach(btn => {
-      btn.addEventListener('click', (e) => {
-        e.preventDefault();
-        const videoId = e.currentTarget.getAttribute('data-video-float');
-        console.log('🔳 Opening floating player:', videoId);
-        openFloatingVideo(videoId);
-      });
-    });
-    
-    if (typeof feather !== 'undefined') {
-      feather.replace();
-    }
-    
-  } catch (error) {
-    console.error('❌ Network Error:', error);
-    
-    ytResults.innerHTML = `
-      <div class="col-12">
-        <div class="card-ui error-state">
-          <div style="text-align:center; padding:2rem;">
-            <div style="font-size:3rem; margin-bottom:1rem;">🔌</div>
-            <h5 style="color:var(--accent); margin-bottom:0.5rem;">Connection Error</h5>
-            <p class="small-muted" style="margin-bottom:1rem;">
-              Unable to connect to YouTube API. Check your internet connection.
-            </p>
-            <small class="text-muted">${escapeHtml(error.message)}</small>
-          </div>
-        </div>
-      </div>
+    floatingVideoInner.innerHTML = `
+      <iframe 
+        src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
+        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+        allowfullscreen
+        frameborder="0" 
+        style="width:100%; height:100%; border:0; display:block;">
+      </iframe>
     `;
+    
+    floatingVideo.style.display = 'flex';
+    if (window.feather) setTimeout(() => feather.replace(), 10);
   }
-}
 
-// CHANGED: Play video inline (stops floating player first)
-function playInlineVideo(videoId) {
-  // Stop floating player if it's playing
-  if (floatingVideo.style.display !== 'none') {
-    floatingVideoInner.innerHTML = '';
-    floatingVideo.style.display = 'none';
-    console.log('🔴 Stopped floating player');
-  }
-  
-  ytInlineIframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0`;
-  ytInlinePlayer.style.display = 'block';
-  
-  // Scroll to player
-  ytInlinePlayer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  
-  console.log('✅ Inline player opened');
-}
-
-// CHANGED: Open floating video window (stops inline player first)
-function openFloatingVideo(videoId) {
-  if (!floatingVideo || !floatingVideoInner) {
-    console.error('❌ Floating video elements not found');
-    alert('Floating player not available. Make sure the HTML includes the floating video container.');
-    return;
-  }
-  
-  // Stop inline player if it's playing
-  if (ytInlinePlayer.style.display !== 'none') {
-    ytInlineIframe.src = '';
-    ytInlinePlayer.style.display = 'none';
-    console.log('🔴 Stopped inline player');
-  }
-  
-  console.log('🎬 Loading video in floating player:', videoId);
-  
-  floatingVideoInner.innerHTML = `
-    <iframe 
-      src="https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0" 
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-      allowfullscreen
-      frameborder="0" 
-      style="width:100%; height:100%; border:0; display:block;">
-    </iframe>
-  `;
-  
-  floatingVideo.style.display = 'flex';
-  
-  // Re-render feather icons
-  if (typeof feather !== 'undefined') {
-    setTimeout(() => feather.replace(), 10);
-  }
-  
-  console.log('✅ Floating player opened');
-}
-
-// Close floating player
-ytFloatClose?.addEventListener('click', () => {
-  floatingVideoInner.innerHTML = '';
-  floatingVideo.style.display = 'none';
-  console.log('🔴 Floating player closed');
-});
-
-// Make floating window draggable (if jQuery UI available)
-if (typeof $ !== 'undefined' && $.fn.draggable) {
-  $(document).ready(function() {
-    $('#floatingVideo').draggable({
-      handle: '.fv-header',
-      containment: 'window'
+  if (ytFloatClose) {
+    ytFloatClose.addEventListener('click', () => {
+      floatingVideoInner.innerHTML = '';
+      floatingVideo.style.display = 'none';
     });
-    console.log('✅ Floating video is draggable');
-  });
-}
-
-// Event listeners
-ytBtn?.addEventListener('click', (e) => {
-  e.preventDefault();
-  searchYouTube();
-});
-
-ytSearchInput?.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    e.preventDefault();
-    searchYouTube();
   }
-});
 
-// Public API
-window.openFloatingYTEmbed = openFloatingVideo;
-window.playInlineYT = playInlineVideo;
-window.stopAllYTPlayers = stopAllPlayers;
+  // Draggable floating video
+  if (floatingVideo && typeof $ !== 'undefined' && $.fn.draggable) {
+    $(document).ready(function() {
+      $('#floatingVideo').draggable({
+        handle: '.fv-header',
+        containment: 'window'
+      });
+    });
+  }
 
-// Diagnostic function
-function testYouTubeAPI() {
-  console.log('🧪 Testing YouTube API...');
-  fetch(`https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=1&q=test&key=${YT_KEY}`)
-    .then(r => r.json())
-    .then(data => {
-      if (data.error) {
-        console.error('❌ API Test Failed:', data.error);
-      } else {
-        console.log('✅ API Test Successful!');
+  if (ytBtn) ytBtn.addEventListener('click', (e) => { e.preventDefault(); searchYouTube(); });
+  if (ytSearchInput) {
+    ytSearchInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        searchYouTube();
       }
-    })
-    .catch(err => console.error('❌ Network Error:', err));
+    });
+  }
 }
 
-window.testYouTubeAPI = testYouTubeAPI;
+// ============================================
+// MAIN INITIALIZATION
+// ============================================
+document.addEventListener('DOMContentLoaded', () => {
+  // Initialize Feather icons
+  if (window.feather) feather.replace();
+  
+  // Initialize all modules
+  initTheme();
+  initNavigation();
+  initMobileMenu();
+  
+  // Start clock
+  updateClock();
+  setInterval(updateClock, 1000);
+  
+  // Initialize widgets
+  renderMiniCalendar();
+  initWeather();
+  
+  // Initialize features
+  initNotes();
+  initMeetings();
+  initRadio();
+  initYouTube();
+  
+  console.log('✅ StudyHub initialized successfully');
+});
 
-console.log('✅ YouTube module loaded');
+// Expose to window for debugging (optional - can be removed)
+window.StudyHub = StudyHub;
